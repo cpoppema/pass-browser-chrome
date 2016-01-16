@@ -24,10 +24,10 @@
             ]
         }
     ],
-    "options_page": "html/options.html",
     "devtools_page": "html/devtools.html",
     "permissions": [
-        "<all_urls>"
+        "<all_urls>",
+        "storage"
     ],
     "web_accessible_resources": [
         "js/*",
@@ -35,5 +35,9 @@
         "css/*",
         "images/*"
     ],
-    "content_security_policy": "script-src 'self'; object-src 'self'"
+    "content_security_policy": "script-src 'self'; object-src 'self'",
+    "options_ui": {
+        "page": "html/options.html",
+        "chrome_style": true
+    }
 }

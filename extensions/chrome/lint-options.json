@@ -1,4 +1,5 @@
 {
+  "browser": true,
   "node": true,
   "curly": true,
   "eqeqeq": true,
@@ -8,7 +9,7 @@
   "noarg": true,
   "nonew": true,
   "undef": true,
-  "unused": true,
+  "unused": false,
   "trailing": true,
   "boss": true,
   "eqnull": true,
@@ -17,5 +18,8 @@
     "describe": true,
     "afterEach": true,
     "it": true
-  }
+  },
+  "predef": [
+    "chrome"
+  ]
 }

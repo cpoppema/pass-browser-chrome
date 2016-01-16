@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "Read secrets from a nodejs server exposing a person's ~/.password-store",
   "dependencies": {
-    "kbpgp": "^2.0.50"
+    "kbpgp": "^2.0.50",
+    "openpgp": "^1.4.1"
   },
   "devDependencies": {
     "grunt": "~0.4.5",

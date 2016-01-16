@@ -1,0 +1,4 @@
+html {width: 600px;}
+#key-container label {vertical-align: top; display: inline-block; top; margin-top: 4px;}
+#public-key {width: 570px; height: 300px;}
+#status {display: inline-block;}

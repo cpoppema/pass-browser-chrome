@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Test Extension Options</title>
-  <style>
-    body: { padding: 10px; }
-  </style>
+  <title>pass-extension-chrome</title>
+  <link rel="stylesheet" type="text/css" href="../css/common.css">
+  <link rel="stylesheet" type="text/css" href="../css/options.css">
+  <!-- <link rel="stylesheet" type="text/css" href="../css/libs/progressjs.min.css"> -->
 </head>
 
 <body>
-  Favorite color:
-  <select id="color">
-   <option value="red">red</option>
-   <option value="green">green</option>
-   <option value="blue">blue</option>
-   <option value="yellow">yellow</option>
-  </select>
+  <p>Set a passphrase and press Generate key.
+  <div id="key-container">
+    <label for="key">PGP key:</label>
+    <textarea id="public-key" name="public-key" readonly></textarea>
+    <input type="hidden" id="private-key" name="private-key"></textarea>
+  </div>
 
-  <label>
-    <input type="checkbox" id="like">
-    I like colors.
-  </label>
+  <p>
+    <label for="key">Passphrase:</label>
+    <input type="password" id="passphrase" name="passphrase" autofocus>
 
-  <div id="status"></div>
-  <button id="save">Save</button>
+    <button id="key-gen">Generate key</button>
+    <button id="save" disabled>Save</button>
+    <span id="status"></span>
+  </p>
 
   <script src="../js/options.js"></script>
 </body>
