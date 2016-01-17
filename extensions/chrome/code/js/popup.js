@@ -11,10 +11,11 @@
   // instance of given context is created / destroyed, or you want to be able to
   // issue command requests from this context), you may simply omit the
   // `hadnlers` parameter for good when invoking msg.init()
-  var handlers = require('./modules/handlers').create('popup');
-  var msg = require('./modules/msg').init('popup', handlers);
+  // var handlers = require('./modules/handlers').create('popup');
+  // var msg = require('./modules/msg').init('popup', handlers);
   var form = require('./modules/form');
-  var runner = require('./modules/runner');
+  // var runner = require('./modules/runner');
 
-  form.init(runner.go.bind(runner, msg));
+  // form.init(runner.go.bind(runner, msg));
+  form.init();
 })();

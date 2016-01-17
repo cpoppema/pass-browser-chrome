@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Read secrets from a nodejs server exposing a person's ~/.password-store",
   "dependencies": {
+    "bootstrap": "^4.0.0-alpha.2",
     "kbpgp": "^2.0.50",
     "openpgp": "^1.4.1"
   },

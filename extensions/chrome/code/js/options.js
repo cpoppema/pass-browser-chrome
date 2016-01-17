@@ -27,7 +27,7 @@
     var public_key = document.getElementById('public-key').value;
     var private_key = document.getElementById('private-key').value;
 
-    chrome.storage.local.get('device_has_key', function(had_key) {
+    chrome.storage.local.get('device_has_key', function(items) {
       chrome.storage.local.set({
         device_has_key: true,
         public_key: public_key,
@@ -35,7 +35,7 @@
       }, function() {
         // Update status to let user know options were saved.
         var status = document.getElementById('status');
-        if(had_key) {
+        if(items.device_has_key) {
           status.textContent = 'Key overwritten.';
         } else {
           status.textContent = 'Key saved.';
@@ -51,7 +51,7 @@
   /**
    * Generate key and display in textarea.
    */
-   function generate_key() {
+  function generate_key() {
     document.getElementById('public-key').value = 'Generating..';
     document.getElementById('private-key').value = '';
     document.getElementById('key-gen').disabled = true;
@@ -132,13 +132,12 @@
     };
 
     openpgp.generateKeyPair(options).then(function(keypair) {
-      document.getElementById('private-key').value = keypair.privateKeyArmored.private_key;
-      document.getElementById('public-key').value = keypair.publicKeyArmored.public_key;
+      document.getElementById('private-key').value = keypair.privateKeyArmored;
+      document.getElementById('public-key').value = keypair.publicKeyArmored;
       document.getElementById('passphrase').value = '';
       document.getElementById('key-gen').disabled = false;
       document.getElementById('save').disabled = false;
-    }).catch(function(error) {
-    });
-   }
+    }).catch(function(error) {});
+  }
   document.getElementById('key-gen').addEventListener('click', generate_key);
 })();

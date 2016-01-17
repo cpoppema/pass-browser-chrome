@@ -1,29 +1,29 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>pass-extension-chrome</title>
-  <link rel="stylesheet" type="text/css" href="../css/common.css">
-  <link rel="stylesheet" type="text/css" href="../css/options.css">
-  <!-- <link rel="stylesheet" type="text/css" href="../css/libs/progressjs.min.css"> -->
-</head>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>pass-extension-chrome</title>
+    <link rel="stylesheet" type="text/css" href="../css/options.css">
+    <!-- <link rel="stylesheet" type="text/css" href="../css/libs/progressjs.min.css"> -->
+  </head>
+  <body>
+    <p>Set a passphrase and press Generate key.
+    <div id="key-container">
+      <label for="key">PGP key:</label>
+      <textarea id="public-key" name="public-key" readonly></textarea>
+      <input type="hidden" id="private-key" name="private-key"></textarea>
+    </div>
 
-<body>
-  <p>Set a passphrase and press Generate key.
-  <div id="key-container">
-    <label for="key">PGP key:</label>
-    <textarea id="public-key" name="public-key" readonly></textarea>
-    <input type="hidden" id="private-key" name="private-key"></textarea>
-  </div>
+    <p>
+      <label for="key">Passphrase:</label>
+      <input type="password" id="passphrase" name="passphrase" autofocus>
 
-  <p>
-    <label for="key">Passphrase:</label>
-    <input type="password" id="passphrase" name="passphrase" autofocus>
+      <button id="key-gen">Generate key</button>
+      <button id="save" disabled>Save</button>
+      <span id="status"></span>
+    </p>
 
-    <button id="key-gen">Generate key</button>
-    <button id="save" disabled>Save</button>
-    <span id="status"></span>
-  </p>
-
-  <script src="../js/options.js"></script>
-</body>
+    <script src="../js/options.js"></script>
+  </body>
 </html>
