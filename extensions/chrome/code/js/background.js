@@ -13,29 +13,43 @@
   // know when new instance of given context is created / destroyed, or you want
   // to be able to issue command requests from this context), you may simply
   // omit the `hadnlers` parameter for good when invoking msg.init()
-  var handlers = require('./modules/handlers').create('bg');
-  // adding special background notification handlers onConnect / onDisconnect
-  function logEvent(ev, context, tabId) {
-    console.log(ev + ': context = ' + context + ', tabId = ' + tabId);
-  }
-  handlers.onConnect = logEvent.bind(null, 'onConnect');
-  handlers.onDisconnect = logEvent.bind(null, 'onDisconnect');
-  var msg = require('./modules/msg').init('bg', handlers);
+  // var handlers = require('./modules/handlers').create('bg');
+  // // adding special background notification handlers onConnect / onDisconnect
+  // function logEvent(ev, context, tabId) {
+  //   console.log(ev + ': context = ' + context + ', tabId = ' + tabId);
+  // }
+  // handlers.onConnect = logEvent.bind(null, 'onConnect');
+  // handlers.onDisconnect = logEvent.bind(null, 'onDisconnect');
+  // var msg = require('./modules/msg').init('bg', handlers);
 
-  // issue `echo` command in 10 seconds after invoked,
-  // schedule next run in 5 minutes
-  function helloWorld() {
-    console.log('===== will broadcast "hello world!" in 10 seconds');
-    setTimeout(function() {
-      console.log('>>>>> broadcasting "hello world!" now');
-      msg.bcast('echo', 'hello world!', function() {
-        console.log('<<<<< broadcasting done');
+  // // issue `echo` command in 10 seconds after invoked,
+  // // schedule next run in 5 minutes
+  // function helloWorld() {
+  //   console.log('===== will broadcast "hello world!" in 10 seconds');
+  //   setTimeout(function() {
+  //     console.log('>>>>> broadcasting "hello world!" now');
+  //     msg.bcast('echo', 'hello world!', function() {
+  //       console.log('<<<<< broadcasting done');
+  //     });
+  //   }, 10 * 1000);
+  //   setTimeout(helloWorld, 5 * 60 * 1000);
+  // }
+
+  // // start broadcasting loop
+  // helloWorld();
+
+  var openpgp = require('openpgp');
+
+  var handlers = {
+    unlock: function(passphrase, done) {
+      // retrieve private key to test passphrase
+      chrome.storage.local.get('private_key', function(items) {
+        var privateKey = openpgp.key.readArmored(items.private_key).keys[0];
+        var unlocked = privateKey.decrypt(passphrase);
+        done(unlocked);
       });
-    }, 10 * 1000);
-    setTimeout(helloWorld, 5 * 60 * 1000);
-  }
+    }
+  };
 
-  // start broadcasting loop
-  helloWorld();
-
+  var msg = require('./modules/msg').init('bg', handlers);
 })();

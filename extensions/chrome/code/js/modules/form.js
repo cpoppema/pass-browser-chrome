@@ -4,9 +4,9 @@
 //
 // no unit tests for this module, it is jQuery manipulation mostly.
 //
-var openpgp = require('openpgp');
 
 var $ = require('../libs/jquery');
+var msg = require('../modules/msg').init('popup');
 
 
 module.exports.init = function(callback) {
@@ -14,10 +14,7 @@ module.exports.init = function(callback) {
     function checkPassphrase(event) {
       var passphrase = $('#passphrase').val();
 
-      // retrieve private key to test passphrase input
-      chrome.storage.local.get('private_key', function(items) {
-        var privateKey = openpgp.key.readArmored(items.private_key).keys[0];
-        var unlocked = privateKey.decrypt(passphrase);
+      msg.bg('unlock', passphrase, function(unlocked) {
         if(unlocked) {
           // succcess
           $('#unlock')
@@ -31,7 +28,6 @@ module.exports.init = function(callback) {
             .addClass('btn-danger');
         }
       });
-
       event.preventDefault();
     }
     $('#unlock-form').on('submit', checkPassphrase);
