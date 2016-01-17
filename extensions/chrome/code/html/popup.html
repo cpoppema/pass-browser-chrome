@@ -7,6 +7,7 @@
     <title>Enter your passphrase to unlock your secrets</title>
     <link rel="stylesheet" type="text/css" href="../css/libs/bootstrap.css">
     <link rel="stylesheet" type="text/css" href="../css/common.css">
+    <link rel="stylesheet" type="text/css" href="../css/libs/progressjs.min.css">
   </head>
   <body>
     <div class="container">
@@ -15,6 +16,10 @@
         <input type="password" id="passphrase" class="form-control" placeholder="Passphrase" autofocus="">
         <button id="unlock" class="btn btn-lg btn-primary btn-block">Unlock</button>
       </form>
+
+      <div id="secrets">
+        <ul id="secrets-list"></ul>
+      </div>
     </div>
 
     <script src="../js/popup.js"></script>

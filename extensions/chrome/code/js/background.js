@@ -48,6 +48,32 @@
         var unlocked = privateKey.decrypt(passphrase);
         done(unlocked);
       });
+    },
+
+    getSecrets: function(done) {
+      chrome.storage.local.get('server', function(items) {
+        var server = items.server || 'http://localhost:8080';
+        var secretsUri = server + '/secrets/';
+
+        function processData(data) {
+          done(JSON.parse(data));
+        }
+
+        function handler() {
+          if(this.status === 200 &&
+            this.responseText !== null) {
+            // success!
+            processData(this.responseText);
+          } else {
+            // something went wrong
+          }
+        }
+
+        var client = new XMLHttpRequest();
+        client.onload = handler;
+        client.open('GET', secretsUri);
+        client.send();
+      });
     }
   };
 
