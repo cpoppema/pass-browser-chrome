@@ -27,7 +27,8 @@
     "devtools_page": "html/devtools.html",
     "permissions": [
         "<all_urls>",
-        "storage"
+        "storage",
+        "clipboardWrite"
     ],
     "web_accessible_resources": [
         "js/*",

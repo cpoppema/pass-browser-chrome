@@ -12,15 +12,39 @@
   <body>
     <div class="container">
       <form id="unlock-form" class="form-signin" autocomplete="off">
-        <label for="passphrase" class="sr-only">Passphrase</label>
         <input type="password" id="passphrase" class="form-control" placeholder="Passphrase" autofocus="">
         <button id="unlock" class="btn btn-lg btn-primary btn-block">Unlock</button>
       </form>
 
-      <div id="secrets">
-        <ul id="secrets-list"></ul>
-      </div>
+      <!-- <div id="secrets" style="display: none;"></div> -->
+      <div id="secrets"></div>
     </div>
+
+    <template id="secrets-list-template">
+      <form id="search-form" class="form-search" autocomplete="off">
+        <input type="text" id="search" class="form-control" placeholder="Search secrets" autofocus="">
+      </form>
+      <p></p>
+      <p>Secrets</p>
+      <ul id="list" class="list-group"></ul>
+    </template>
+
+    <template id="secrets-list-item-template">
+      <li class="list-group-item secret">
+        <h5 class="list-group-item-heading path"></h5>
+        <span class="label label-default label-pill pull-xs-right username-copy">Copy</span>
+        <p class="list-group-item-text"><input type="text" class="username" readonly></p>
+        <span class="label label-default label-pill pull-xs-right password-show">Show</span>
+        <span class="label label-default label-pill pull-xs-right password-copy">Copy</span>
+        <p class="list-group-item-text password"><input type="text" class="password" readonly value="******"></p>
+      </li>
+    </template>
+
+    <template id="no-secrets-template">
+      <p id="no-secrets">
+        No secrets found
+      </p>
+    </template>
 
     <script src="../js/popup.js"></script>
   </body>

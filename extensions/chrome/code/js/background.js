@@ -38,6 +38,19 @@
   // // start broadcasting loop
   // helloWorld();
 
+  /**
+   * Helper function to copy text to clipboard.
+   */
+  function copyToClipboard(text) {
+    var input = document.createElement('textarea');
+    document.body.appendChild(input);
+    input.value = text;
+    input.focus();
+    input.select();
+    document.execCommand('Copy');
+    input.remove();
+  }
+
   var openpgp = require('openpgp');
 
   var handlers = {
@@ -74,6 +87,30 @@
         client.open('GET', secretsUri);
         client.send();
       });
+    },
+
+    copyUsername: function(username) {
+      copyToClipboard(username);
+    },
+
+    copyPassword: function(path, username) {
+      // get password from server
+
+      // decrypt
+      var password = '******';
+
+      // copy
+      copyToClipboard(password);
+    },
+
+    getPassword: function(path, username, done) {
+      // get password from server
+
+      // decrypt
+      var password = '++++++';
+
+      // return password
+      done(password);
     }
   };
 

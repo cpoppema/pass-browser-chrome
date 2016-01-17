@@ -37,7 +37,7 @@ var msg = require('../modules/msg').init('popup');
  * { 'project1.authors': [ 'alice', 'bob' ],
  *   'project2.authors.special': [ 'charlie' ] }
  */
-var flattenObject = function(ob) {
+function flattenObject(ob) {
     var toReturn = {};
 
     for (var i in ob) {
@@ -66,7 +66,7 @@ var flattenObject = function(ob) {
         }
     }
     return toReturn;
-};
+}
 
 module.exports.init = function(callback) {
   $(function() {
@@ -96,30 +96,88 @@ module.exports.init = function(callback) {
 
             msg.bg('getSecrets', function(data) {
               // succcess
-              $('#unlock')
-                .removeClass('btn-primary btn-danger')
-                .addClass('btn-success');
-              progressJs.end();
-
-              // hide unlock form and switch to secrets
-              enableSecrets();
-
-              // loop through secrets and show progress if any
-              if(Object.keys(data.secrets).length) {
-                var secrets = flattenObject(data.secrets);
-                var increment = Math.ceil(100 / Object.keys(secrets).length);
-
-                // start progress while building list
-                progressJs = require('../libs/progress').progressJs('#secrets-list');
-                progressJs.start();
-                $.each(secrets, function(i, secret) {
-                  progressJs.increase(increment);
-
-                  // add secret to list
-                  console.log(i, secret);
-                });
+              setTimeout(function() {
+                $('#unlock')
+                  .removeClass('btn-primary btn-danger')
+                  .addClass('btn-success');
                 progressJs.end();
-              }
+
+                // hide unlock form and switch to secrets
+                enableSecrets();
+
+                // loop through secrets and show progress if any
+                if(Object.keys(data.secrets).length) {
+                  var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
+                  secretsList.appendTo($('#secrets'));
+
+                  // bind copy/show events
+                  $('#list').on('click', '.username-copy', function(event) {
+                    var username = $(event.target).closest('.secret').find('.username');
+                    msg.bg('copyUsername', username.val());
+                  });
+                  $('#list').on('click', '.password-copy', function(event) {
+                    var secret = $(event.target).closest('.secret');
+                    var path = secret.data('path');
+                    var username = secret.data('username');
+                    msg.bg('copyPassword', path, username);
+                  });
+                  $('#list').on('click', '.password-show', function(event) {
+                    var secret = $(event.target).closest('.secret');
+                    var path = secret.data('path');
+                    var username = secret.data('username');
+                    msg.bg('getPassword', path, username, function(password) {
+                      $(secret).find('.password').val(password);
+                    });
+                  });
+
+                  // start progress while building list
+                  progressJs = require('../libs/progress').progressJs('#list');
+                  progressJs.start();
+                  progressJs.increase(5);
+
+                  var secrets = flattenObject(data.secrets);
+                  var reverseSecrets = {};
+                  $.each(secrets, function(path, usernames) {
+                    $.each(usernames, function(i, username) {
+                      reverseSecrets[username] = path;
+                    });
+                  });
+                  var usernames = Object.keys(reverseSecrets);
+
+                  var progressIncrement = Math.ceil(100 / usernames.length);
+
+                  $.each(usernames.sort(function(string1, string2) {
+                      return string1.localeCompare(string2); // localeCompare is case-insensitive
+                  }), function(i, username) {
+                    console.log(i, username);
+                    setTimeout(function() {
+                      // add secret to list
+                      var path = reverseSecrets[username];
+                      var secret = $($('#secrets-list-item-template').clone().get(0).content).children();
+                      secret.find('.path').text(path);
+                      secret.find('.username').val(username).attr('title', username);
+                      secret
+                        .attr('data-path', path)
+                        .attr('data-username', username);
+                      secret.appendTo($('#list'));
+
+                      // show progress
+                      progressJs.increase(progressIncrement);
+                    }, i * 100);
+                  });
+                  setTimeout(function() {
+                    progressJs.end();
+                  }, usernames.length * 100);
+                } else {
+                  // no secrets retrieved from server
+                  if(data.error) {
+
+                  } else {
+                    var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
+                    noSecretsMessage.appendTo($('#secrets'));
+                  }
+                }
+              }, 1000);
             });
           } else {
             // error
@@ -145,7 +203,8 @@ module.exports.init = function(callback) {
     }
 
     function disableSecrets() {
-      $('#secrets-list').html('');
+      $('#secrets').hide();
+      $('#secrets').html('');
     }
 
     function restorePopup() {

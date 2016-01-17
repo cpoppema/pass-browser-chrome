@@ -2,10 +2,10 @@ body {
   padding-top: 40px;
   padding-bottom: 40px;
   background-color: #eee;
+  width: 330px;
 }
 
 .form-signin {
-  width: 330px;
   padding: 15px;
   margin: 0 auto;
 }
@@ -23,4 +23,31 @@ body {
   margin-bottom: 10px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+#list .list-group-item-heading,
+#list .list-group-item-text {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#list .list-group-item-text input {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+#list .list-group-item-text input.username {
+  max-width: 210px;
+}
+
+#list .list-group-item-text input.password {
+  max-width: 160px;
+}
+
+.username-copy,
+.password-show,
+.password-copy {
+  cursor: pointer;
 }
