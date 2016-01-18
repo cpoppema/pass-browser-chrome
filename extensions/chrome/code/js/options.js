@@ -19,13 +19,17 @@
 //   // form.init(runner.go.bind(runner, msg));
 // })();
 
+var openpgp = require('openpgp');
+
+var $ = require('./libs/jquery');
+
 ;(function() {
   /**
    * Save keys to 'chrome.local'.
    */
   function save_keys() {
-    var public_key = document.getElementById('public-key').value;
-    var private_key = document.getElementById('private-key').value;
+    var public_key = $('#public-key').val();
+    var private_key = $('#private-key').val();
 
     chrome.storage.local.get('device_has_key', function(items) {
       chrome.storage.local.set({
@@ -34,11 +38,10 @@
         private_key: private_key
       }, function() {
         // Update status to let user know options were saved.
-        var status = document.getElementById('status');
         if(items.device_has_key) {
-          status.textContent = 'Key overwritten.';
+          $('#status').text('Key overwritten.');
         } else {
-          status.textContent = 'Key saved.';
+          $('#status').text('Key saved.');
         }
         setTimeout(function() {
           status.textContent = '';
@@ -46,15 +49,15 @@
       });
     });
   }
-  document.getElementById('save').addEventListener('click', save_keys);
+  $('#save').on('click', save_keys);
 
   /**
    * Generate key and display in textarea.
    */
   function generate_key() {
-    document.getElementById('public-key').value = 'Generating..';
-    document.getElementById('private-key').value = '';
-    document.getElementById('key-gen').disabled = true;
+    $('#public-key').val('Generating..');
+    $('#private-key').val('');
+    $('#key-gen').prop('disabled', true);
 
     // var kbpgp = require('kbpgp');
     // var F = kbpgp["const"].openpgp;
@@ -124,20 +127,26 @@
     //     });
     //   }
     // });
-    var openpgp = require('openpgp');
     var options = {
         numBits: 2048,
         userId: require('./libs/UUID').generate(),
-        passphrase: document.getElementById('passphrase').value
+        passphrase: $('#passphrase').val()
     };
 
     openpgp.generateKeyPair(options).then(function(keypair) {
-      document.getElementById('private-key').value = keypair.privateKeyArmored;
-      document.getElementById('public-key').value = keypair.publicKeyArmored;
-      document.getElementById('passphrase').value = '';
-      document.getElementById('key-gen').disabled = false;
-      document.getElementById('save').disabled = false;
+      $('#private-key').val(keypair.privateKeyArmored);
+      $('#public-key').val(keypair.publicKeyArmored);
+      $('#passphrase').val('');
+      $('#key-gen').prop('disabled', false);
+      $('#save').prop('disabled', false);
     }).catch(function(error) {});
   }
-  document.getElementById('key-gen').addEventListener('click', generate_key);
+  $('#key-gen').on('click', generate_key);
+
+  // show key on load
+  chrome.storage.local.get('public_key', function(items) {
+    if(items.public_key) {
+      $('#public-key').val(items.public_key);
+    }
+  });
 })();
