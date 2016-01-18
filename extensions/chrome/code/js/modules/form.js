@@ -113,13 +113,33 @@ module.exports.init = function(callback) {
                   // bind copy/show events
                   $('#list').on('click', '.username-copy', function(event) {
                     var username = $(event.target).closest('.secret').find('.username');
-                    msg.bg('copyUsername', username.val());
+                    msg.bg('copyUsername', username.val(), function() {
+                      $('.copied').each(function(i, elem) {
+                        $(elem).text($(elem).data('reset-text'));
+                        $(elem).removeClass('copied label-primary');
+                      });
+                      if(!$(event.target).data('reset-text')) {
+                        $(event.target).data('reset-text', $(event.target).text());
+                      }
+                      $(event.target).text($(event.target).data('copied-text'));
+                      $(event.target).addClass('copied label-primary');
+                    });
                   });
                   $('#list').on('click', '.password-copy', function(event) {
                     var secret = $(event.target).closest('.secret');
                     var path = secret.data('path');
                     var username = secret.data('username');
-                    msg.bg('copyPassword', path, username);
+                    msg.bg('copyPassword', path, username, function() {
+                      $('.copied').each(function(i, elem) {
+                        $(elem).text($(elem).data('reset-text'));
+                        $(elem).removeClass('copied label-primary');
+                      });
+                      if(!$(event.target).data('reset-text')) {
+                        $(event.target).data('reset-text', $(event.target).text());
+                      }
+                      $(event.target).text($(event.target).data('copied-text'));
+                      $(event.target).addClass('copied label-primary');
+                    });
                   });
                   $('#list').on('click', '.password-show', function(event) {
                     var secret = $(event.target).closest('.secret');

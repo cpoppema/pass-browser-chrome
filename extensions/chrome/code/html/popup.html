@@ -11,31 +11,31 @@
   </head>
   <body>
     <div class="container">
+      <!-- unlock form -->
       <form id="unlock-form" class="form-signin" autocomplete="off">
         <input type="password" id="passphrase" class="form-control" placeholder="Passphrase" autofocus="">
         <button id="unlock" class="btn btn-lg btn-primary btn-block">Unlock</button>
       </form>
 
-      <!-- <div id="secrets" style="display: none;"></div> -->
+      <!-- list of secrets, visible after unlock -->
       <div id="secrets"></div>
     </div>
 
     <template id="secrets-list-template">
       <form id="search-form" class="form-search" autocomplete="off">
-        <input type="text" id="search" class="form-control" placeholder="Search secrets" autofocus="">
+        <input type="text" id="search" class="form-control" placeholder="Search.." autofocus="">
       </form>
       <p></p>
-      <p>Secrets</p>
       <ul id="list" class="list-group"></ul>
     </template>
 
     <template id="secrets-list-item-template">
       <li class="list-group-item secret">
-        <h5 class="list-group-item-heading path"></h5>
-        <span class="label label-default label-pill pull-xs-right username-copy">Copy</span>
+        <h5 class="list-group-item-heading domain"></h5>
+        <span class="label label-default label-pill pull-xs-right username-copy copy" data-copied-text="Copied">Copy</span>
         <p class="list-group-item-text"><input type="text" class="username" readonly></p>
         <span class="label label-default label-pill pull-xs-right password-show">Show</span>
-        <span class="label label-default label-pill pull-xs-right password-copy">Copy</span>
+        <span class="label label-default label-pill pull-xs-right password-copy copy" data-copied-text="Copied">Copy</span>
         <p class="list-group-item-text password"><input type="text" class="password" readonly value="******"></p>
       </li>
     </template>

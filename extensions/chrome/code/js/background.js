@@ -89,11 +89,13 @@
       });
     },
 
-    copyUsername: function(username) {
+    copyUsername: function(username, done) {
       copyToClipboard(username);
+
+      done();
     },
 
-    copyPassword: function(path, username) {
+    copyPassword: function(path, username, done) {
       // get password from server
 
       // decrypt
@@ -101,6 +103,8 @@
 
       // copy
       copyToClipboard(password);
+
+      done();
     },
 
     getPassword: function(path, username, done) {
