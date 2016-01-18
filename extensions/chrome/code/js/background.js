@@ -82,10 +82,18 @@
           }
         }
 
-        var client = new XMLHttpRequest();
-        client.onload = handler;
-        client.open('GET', secretsUri);
-        client.send();
+        chrome.storage.local.get('public_key', function(items) {
+          // provide public key id as authentication
+          var publicKey = openpgp.key.readArmored(items.public_key).keys[0];
+          var longKeyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+          var shortKeyId = longKeyId.substr(-8);
+
+          var client = new XMLHttpRequest();
+          client.onload = handler;
+          client.open('POST', secretsUri);
+          client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+          client.send(JSON.stringify({longKeyId: longKeyId, shortKeyId: shortKeyId}));
+        });
       });
     },
 
