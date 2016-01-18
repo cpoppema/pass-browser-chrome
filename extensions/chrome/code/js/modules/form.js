@@ -6,7 +6,6 @@
 //
 
 var $ = require('../libs/jquery');
-window.$ = window.jQuery = $;
 var msg = require('../modules/msg').init('popup');
 
 /**
