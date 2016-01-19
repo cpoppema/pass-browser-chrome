@@ -8,65 +8,6 @@
 var $ = require('../libs/jquery');
 var msg = require('../modules/msg').init('popup');
 
-/**
- * Helper function to get values from a nested object.
- *
- * Example:
- *
- * var tree = {
- *   'objects': {
- *     'project1': {
- *       'authors': [
- *         'alice',
- *         'bob'
- *       ]
- *     },
- *     'project2': {
- *       'authors': {
- *         'special': [
- *           'charlie'
- *         ]
- *       }
- *     }
- *   }
- * };
- *
- * turns into:
- *
- * { 'project1.authors': [ 'alice', 'bob' ],
- *   'project2.authors.special': [ 'charlie' ] }
- */
-function flattenObject(ob) {
-    var toReturn = {};
-
-    for (var i in ob) {
-        if (!ob.hasOwnProperty(i)) {
-            continue;
-        }
-
-        if ((typeof ob[i]) === 'object') {
-            var flatObject = flattenObject(ob[i]);
-            for (var x in flatObject) {
-                if (!flatObject.hasOwnProperty(x)) {
-                    continue;
-                }
-
-                if(Array.isArray(ob[i])) {
-                    if(!(i in toReturn)) {
-                        toReturn[i] = [];
-                    }
-                    toReturn[i].push(flatObject[x]);
-                } else {
-                    toReturn[i + '/' + x] = flatObject[x];
-                }
-            }
-        } else {
-            toReturn[i] = ob[i];
-        }
-    }
-    return toReturn;
-}
-
 module.exports.init = function(callback) {
   $(function() {
     function enableUnlock() {
@@ -123,7 +64,7 @@ module.exports.init = function(callback) {
                   enableSecrets();
 
                   // loop through secrets and show progress if any
-                  if(Object.keys(data.secrets).length) {
+                  if(data.secrets.length) {
                     var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
                     secretsList.appendTo($('#secrets'));
 
@@ -171,31 +112,22 @@ module.exports.init = function(callback) {
                     progressJs = require('../libs/progress').progressJs('#list');
                     progressJs.start();
                     progressJs.increase(5);
+                    var progressIncrement = Math.ceil(100 / data.secrets.length);
 
-                    var secrets = flattenObject(data.secrets);
-                    var reverseSecrets = {};
-                    $.each(secrets, function(path, usernames) {
-                      $.each(usernames, function(i, username) {
-                        reverseSecrets[username] = path;
-                      });
-                    });
-                    var usernames = Object.keys(reverseSecrets);
-
-                    var progressIncrement = Math.ceil(100 / usernames.length);
-
-                    $.each(usernames.sort(function(string1, string2) {
-                        return string1.localeCompare(string2); // localeCompare is case-insensitive
-                    }), function(i, username) {
+                    $.each(data.secrets.sort(function(secret1, secret2) {
+                        // localeCompare is case-insensitive
+                        return (secret1.domain.localeCompare(secret2.domain) ||
+                                secret1.username.localeCompare(secret2.username));
+                    }), function(i, secret) {
                       setTimeout(function() {
                         // add secret to list
-                        var path = reverseSecrets[username];
-                        var secret = $($('#secrets-list-item-template').clone().get(0).content).children();
-                        secret.find('.path').text(path);
-                        secret.find('.username').val(username).attr('title', username);
-                        secret
-                          .attr('data-path', path)
-                          .attr('data-username', username);
-                        secret.appendTo($('#list'));
+                        var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
+                        secretTemplate.find('.domain').text(secret.domain);
+                        secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
+                        secretTemplate
+                          .attr('data-path', secret.path)
+                          .attr('data-username', secret.username);
+                        secretTemplate.appendTo($('#list'));
 
                         // show progress
                         progressJs.increase(progressIncrement);
@@ -203,7 +135,7 @@ module.exports.init = function(callback) {
                     });
                     setTimeout(function() {
                       progressJs.end();
-                    }, usernames.length * 100);
+                    }, data.secrets.length * 100);
                   } else {
                     // no secrets retrieved from server
                     if(data.error) {
