@@ -11,6 +11,7 @@ var bodyParser = require('body-parser')
   , nodeMailer = require('nodemailer')
   , path = require('path')
   , sendmailTransport = require('nodemailer-sendmail-transport')
+  , walk = require('walk')
   ;
 
 var keyAuth = require('./key-auth');
@@ -63,6 +64,54 @@ app.use('/index', function (req, res) {
   res.writeHead(200, {'Content-Type': 'application/json'})
   res.end(JSON.stringify({'message': 'hello, world!'}, null, 2))
 })
+
+app.use('/secrets', function(req, res) {
+  // // 'walk' will simply concatenate the root with the filename, resulting
+  // // in /path//filename if the trailing if the trailing slash is kept here
+  // var passwordDir = process.env.PASSWORD_STORE_DIR.replace(/\/$/, '');
+  var passwordDir = process.env.PASSWORD_STORE_DIR;
+  var secrets = [];
+
+  var walker = walk.walk(passwordDir, {
+    followLinks: false
+  });
+
+  walker.on('file', function (root, fileStats, next) {
+    if(root === passwordDir) {
+      // skip everything in the root directory
+      next();
+    } else {
+      var domain = path.basename(root);
+      var extension = path.extname(fileStats.name);
+      var username = path.basename(fileStats.name, extension);
+      var relPath = path.relative(passwordDir, root);
+
+      // skip everything without a domain
+      if(domain) {
+        // add file to secrets
+        secrets.push({domain: domain, username: username, path: relPath});
+      }
+
+      next();
+
+      // fs.readFile(fileStats.name, function () {
+      //   // doStuff
+      //   next();
+      // });
+    }
+  });
+
+  walker.on('errors', function (root, nodeStatsArray, next) {
+    console.log('error', nodeStatsArray);
+    next();
+  });
+
+  walker.on('end', function () {
+    res.writeHead(200, {'Content-Type': 'application/json'})
+    res.end(JSON.stringify(secrets, null, 2))
+  });
+});
+
 
 /**
  * Error handling.

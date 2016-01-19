@@ -18,7 +18,8 @@
     "line-reader": "^0.3.0",
     "morgan": "^1.6.1",
     "nodemailer": "^2.0.0",
-    "nodemailer-sendmail-transport": "^1.0.0"
+    "nodemailer-sendmail-transport": "^1.0.0",
+    "walk": "^2.3.9"
   },
   "devDependencies": {
     "node-notifier": "^4.4.0"
