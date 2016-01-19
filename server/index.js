@@ -2,20 +2,26 @@
 
 var bodyParser = require('body-parser')
   , connect = require('connect')
-  , errorhandler = require('errorhandler')
+  , errorHandler = require('errorhandler')
   , fileStreamRotator = require('file-stream-rotator')
   , fs = require('fs')
   , http = require('http')
   , https = require('https')
   , morgan = require('morgan')
-  , nodemailer = require('nodemailer')
+  , nodeMailer = require('nodemailer')
   , path = require('path')
   , sendmailTransport = require('nodemailer-sendmail-transport')
+  ;
+
+var keyAuth = require('./key-auth');
 
 var app = connect()
 
 // parse incoming requests as json
 app.use(bodyParser.json())
+
+// authentication using a public key's id
+app.use(keyAuth());
 
 /**
  * Logging.
@@ -71,7 +77,7 @@ if (process.env.NODE_ENV === 'dev') {
 
   // must be 'used' after url routing otherwise none of the exceptions in a
   // view reaches this 'next' middleware
-  app.use(errorhandler({log: function(err, str, req) {
+  app.use(errorHandler({log: function(err, str, req) {
     var title = 'Error in ' + req.method + ' ' + req.url
 
     notifier.notify({
@@ -81,13 +87,13 @@ if (process.env.NODE_ENV === 'dev') {
     })
   }}))
 } else {
-  app.use(errorhandler({log: function(err, str, req) {
-    var transporter = nodemailer.createTransport(sendmailTransport({
+  app.use(errorHandler({log: function(err, str, req) {
+    var transporter = nodeMailer.createTransport(sendmailTransport({
       path: '/usr/sbin/sendmail'
     }))
     transporter.sendMail({
       to: (process.env.ERROR_MAILTO || 'root@localhost'),
-      from: (process.env.ERROR_MAILTO || 'root@localhost'),
+      from: (process.env.ERROR_MAILFROM || 'root@localhost'),
       subject: 'ERROR: ' + err.constructor.name + ' in ' + req.method + ' ' + req.url,
       text: err.stack,
       // html: err.stack.replace(/(?:\r\n|\r|\n)/g, '<br>')
@@ -104,14 +110,5 @@ if (process.env.NODE_ENV === 'dev') {
  */
 
 var PORT = process.env.PORT || 8080
-  , HOST = process.env.HOST || '0.0.0.0'
-
-// if (PORT === 443) {
-//   var options = {
-//     key: fs.readFileSync('key.pem'),
-//     cert: fs.readFileSync('cert.pem')
-//   }
-//   https.createServer(options, app).listen(PORT, HOST)
-// } else {
-  http.createServer(app).listen(PORT, HOST)
-// }
+  , HOST = 'localhost'
+http.createServer(app).listen(PORT, HOST)
