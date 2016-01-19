@@ -68,17 +68,20 @@
         var server = items.server || 'http://localhost:8080';
         var secretsUri = server + '/secrets/';
 
-        function processData(data) {
-          done(JSON.parse(data));
-        }
-
         function handler() {
           if(this.status === 200 &&
             this.responseText !== null) {
             // success!
-            processData(this.responseText);
+            done({
+              error: null,
+              secrets: JSON.parse(this.responseText)
+            });
           } else {
             // something went wrong
+            done({
+              error: this.status,
+              response: JSON.parse(this.responseText)
+            });
           }
         }
 
@@ -122,6 +125,11 @@
 
       // return password
       done(password);
+    },
+
+    notify: function(notificationId, options) {
+      console.log(options);
+      chrome.notifications.create(notificationId, options);
     }
   };
 
