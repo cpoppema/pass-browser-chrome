@@ -29,7 +29,7 @@ rules:
   ## disallow assignment of exceptional params
   no-ex-assign: 2
   ## disallow use of reserved words as keys like enum, class
-  no-reserved-keys: 2
+  quote-props: [2, "as-needed", { "keywords": true }]
   ## disallow unreachable code
   no-unreachable: 2
   ## require valid typeof compared string like typeof foo === 'strnig'

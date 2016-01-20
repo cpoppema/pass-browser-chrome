@@ -9,10 +9,12 @@
 var $ = require('../libs/jquery');
 var msg = require('../modules/msg').init('form');
 
+
 module.exports.init = function(callback) {
+
   $(function() {
     function clearAlerts() {
-      $('.alerts').html('');
+      $('.alerts').empty();
     }
 
     function disableUnlock() {
@@ -29,7 +31,7 @@ module.exports.init = function(callback) {
 
     function disableSecrets() {
       $('#secrets').hide();
-      $('#secrets').html('');
+      $('#secrets').empty();
     }
 
     function enableUnlock() {
@@ -142,30 +144,57 @@ module.exports.init = function(callback) {
                         });
                       });
 
-                      // start progress while building list
-                      progressJs = require('../libs/progress').progressJs('#list');
-                      progressJs.start();
-                      progressJs.increase(5);
-                      var progressIncrement = Math.ceil(100 / data.secrets.length);
+                      // add secrets to DOM
+                      $.each(data.secrets, function(i, secret) {
+                        // add secret to list
+                        var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
+                        secretTemplate.find('.domain').text(secret.domain);
+                        secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
+                        secretTemplate
+                          .attr('data-domain', secret.domain)
+                          .attr('data-path', secret.path)
+                          .attr('data-username', secret.username)
+                          // do not display initially
+                          .css('display', 'none');  // .hide() won't work
+                        secretTemplate.appendTo($('#list'));
+                      });
 
+                      var animationDelay = 150;
+                      // start progress while building list
+                      var progressIncrement = Math.ceil(100 / data.secrets.length);
+                      progressJs = require('../libs/progress').progressJs('#list');
+                      progressJs.start().autoIncrease(progressIncrement, animationDelay);
+
+                      // make secrets visible
                       $.each(data.secrets, function(i, secret) {
                         setTimeout(function() {
-                          // add secret to list
-                          var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
-                          secretTemplate.find('.domain').text(secret.domain);
-                          secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
-                          secretTemplate
-                            .attr('data-path', secret.path)
-                            .attr('data-username', secret.username);
-                          secretTemplate.appendTo($('#list'));
+                          // show element
+                          var secretElem = $('.secret[data-path="' + secret.path + '"]:not(:visible):first');
+                          secretElem.show();
 
                           // show progress
-                          progressJs.increase(progressIncrement);
-                        }, i * 100);
+                          progressJs.set((i + 1) * progressIncrement);
+
+                          if ((i + 1) === data.secrets.length) {
+                            // end progress
+                            progressJs.end();
+
+                            // filter list on render finish
+                            var currentQuery = $('#search').val().trim();
+                            if (!currentQuery) {
+                              chrome.storage.local.get('lastQuery', function(items) {
+                                var lastQuery = items.lastQuery;
+                                if (lastQuery) {
+                                  $('#search').val(lastQuery);
+                                  filterSecrets(lastQuery);
+                                }
+                              });
+                            } else {
+                              filterSecrets(currentQuery);
+                            }
+                          }
+                        }, i * animationDelay);
                       });
-                      setTimeout(function() {
-                        progressJs.end();
-                      }, data.secrets.length * 100);
                     } else {
                       // no secrets retrieved from server
                       if (data.error) {
@@ -190,9 +219,43 @@ module.exports.init = function(callback) {
       });
     }
 
-    function restorePopup() {
-      enableUnlock();
+    function fuzzyContains(hay, needle) {
+      hay = hay.toLowerCase();
+
+      var i = 0, n = -1, l;
+      needle = needle.toLowerCase();
+      for (; l = needle[i++] ;) {
+        if (!~(n = hay.indexOf(l, n + 1))) {
+          return false;
+        }
+      }
+      return true;
     }
-    restorePopup();
+
+    function filterSecrets(query) {
+      // filter list
+      $('.secret').each(function(i, secretElem) {
+        if (fuzzyContains($(secretElem).attr('data-domain'), query) ||
+            fuzzyContains($(secretElem).attr('data-username'), query)) {
+          $(secretElem).show();
+        } else {
+          $(secretElem).hide();
+        }
+      });
+    }
+
+    $('.container').on('input', '#search', function(event) {
+      var query = $(event.target).val().trim();
+      chrome.storage.local.set({lastQuery: query}, function() {
+        if (query) {
+          filterSecrets(query);
+        } else {
+          $('.secret').show();
+        }
+      });
+    });
+
+    // always show unlock form
+    enableUnlock();
   });
 };
