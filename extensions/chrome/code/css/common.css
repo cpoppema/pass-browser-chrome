@@ -1,26 +1,29 @@
 body {
-  padding-top: 40px;
-  padding-bottom: 40px;
+  padding-top: .9375rem;
+  padding-bottom: .9375rem;
   background-color: #eee;
   width: 330px;
 }
 
+.options-link {
+  padding-bottom: .9375rem;
+}
+
 .form-signin {
-  padding: 15px;
   margin: 0 auto;
 }
 .form-signin .form-signin-heading {
-  margin-bottom: 10px;
+  padding-bottom: .9375rem;
 }
 .form-signin .form-control {
   position: relative;
   height: auto;
   box-sizing: border-box;
-  padding: 10px;
-  font-size: 16px;
+  padding: .625rem;
+  font-size: 1rem;
 }
 .form-signin input[type="password"] {
-  margin-bottom: 10px;
+  margin-bottom: .625rem;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
