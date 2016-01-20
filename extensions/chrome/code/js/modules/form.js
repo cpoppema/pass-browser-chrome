@@ -148,11 +148,7 @@ module.exports.init = function(callback) {
                       progressJs.increase(5);
                       var progressIncrement = Math.ceil(100 / data.secrets.length);
 
-                      $.each(data.secrets.sort(function(secret1, secret2) {
-                        // localeCompare is case-insensitive
-                        return (secret1.domain.localeCompare(secret2.domain) ||
-                                secret1.username.localeCompare(secret2.username));
-                      }), function(i, secret) {
+                      $.each(data.secrets, function(i, secret) {
                         setTimeout(function() {
                           // add secret to list
                           var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();

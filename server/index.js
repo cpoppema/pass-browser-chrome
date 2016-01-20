@@ -107,6 +107,12 @@ app.use('/secrets', function(req, res) {
   });
 
   walker.on('end', function () {
+    secrets = secrets.sort(function(secret1, secret2) {
+      // localeCompare is case-insensitive
+      return (secret1.domain.localeCompare(secret2.domain) ||
+              secret1.username.localeCompare(secret2.username));
+    })
+
     res.writeHead(200, {'Content-Type': 'application/json'})
     res.end(JSON.stringify(secrets, null, 2))
   });
