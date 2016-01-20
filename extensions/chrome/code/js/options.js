@@ -19,114 +19,48 @@
 //   // form.init(runner.go.bind(runner, msg));
 // })();
 
+'use strict';
+
 var openpgp = require('openpgp');
 
 var $ = require('./libs/jquery');
 
-;(function() {
+(function() {
   /**
    * Save keys to 'chrome.local'.
    */
-  function save_keys() {
-    var public_key = $('#public-key').val();
-    var private_key = $('#private-key').val();
+  function saveKeys() {
+    var publicKey = $('#public-key').val();
+    var privateKey = $('#private-key').val();
 
-    chrome.storage.local.get('device_has_key', function(items) {
+    chrome.storage.local.get('hasKey', function(items) {
       chrome.storage.local.set({
-        device_has_key: true,
-        public_key: public_key,
-        private_key: private_key
+        hasKey: true,
+        publicKey: publicKey,
+        privateKey: privateKey
       }, function() {
         // Update status to let user know options were saved.
-        if(items.device_has_key) {
+        if (items.hasKey) {
           $('#status').text('Key overwritten.');
         } else {
           $('#status').text('Key saved.');
         }
         setTimeout(function() {
-          status.textContent = '';
+          $('#status').text('');
         }, 750);
       });
     });
   }
-  $('#save').on('click', save_keys);
+  $('#save').on('click', saveKeys);
 
   /**
    * Generate key and display in textarea.
    */
-  function generate_key() {
+  function generateKey() {
     $('#public-key').val('Generating..');
     $('#private-key').val('');
     $('#key-gen').prop('disabled', true);
 
-    // var kbpgp = require('kbpgp');
-    // var F = kbpgp["const"].openpgp;
-
-    // var progressElement = '#public-key';
-    // var progressJs = require('./libs/progress').progressJs(progressElement);
-    // progressJs.onprogress(function(targetElement, percent) {
-    //   // the 'end' is uncertain, since this is percent-based, do % 100
-    //   if(percent === 99) {
-    //     setTimeout(function() {
-    //       var progressjsId = parseInt(targetElement.getAttribute('data-progressjs'));
-    //       var percentElement = document.querySelector('.progressjs-container > .progressjs-progress[data-progressjs="' + progressjsId + '"] > .progressjs-inner');
-    //       percentElement.style.width = '1%';
-    //     }, 25);
-    //   }
-    // });
-
-    // var opts = {
-    //   asp: new kbpgp.ASP({
-    //     progress_hook: function(o) {
-    //       progressJs.increase(1);
-    //     }
-    //   }),
-    //   userid: require('./libs/UUID').generate(),
-    //   primary: {
-    //     nbits: 2048,
-    //     flags: F.certify_keys | F.sign_data | F.auth | F.encrypt_comm | F.encrypt_storage,
-    //     expire_in: 0  // never expire
-    //   },
-    //   subkeys: [
-    //     {
-    //       nbits: 2048,
-    //       flags: F.sign_data,
-    //       expire_in: 86400 * 365
-    //     }, {
-    //       nbits: 2048,
-    //       flags: F.encrypt_comm | F.encrypt_storage,
-    //       expire_in: 86400 * 365
-    //     }
-    //   ]
-    // };
-
-    // progressJs.start();
-
-    // var t0 = Date.now();
-    // kbpgp.KeyManager.generate(opts, function(err, alice) {
-    //   if (!err) {
-    //     // sign alice's subkeys
-    //     alice.sign({}, function(err) {
-    //       alice.export_pgp_private ({
-    //         passphrase: document.getElementById('passphrase').value
-    //       }, function(err, pgp_private) {
-    //         console.log("private key: ", pgp_private);
-
-    //         document.getElementById('private-key').value = pgp_private;
-    //       });
-    //       alice.export_pgp_public({}, function(err, pgp_public) {
-    //         console.log("public key: ", pgp_public);
-
-    //         console.log(Date.now() - t0);
-    //         progressJs.end();
-    //         document.getElementById('public-key').value = pgp_public;
-    //         document.getElementById('key-gen').disabled = false;
-    //         document.getElementById('passphrase').value = '';
-    //         document.getElementById('save').disabled = false;
-    //       });
-    //     });
-    //   }
-    // });
     var options = {
         numBits: 2048,
         userId: require('./libs/UUID').generate(),
@@ -139,14 +73,14 @@ var $ = require('./libs/jquery');
       $('#passphrase').val('');
       $('#key-gen').prop('disabled', false);
       $('#save').prop('disabled', false);
-    }).catch(function(error) {});
+    });
   }
-  $('#key-gen').on('click', generate_key);
+  $('#key-gen').on('click', generateKey);
 
   // show key on load
-  chrome.storage.local.get('public_key', function(items) {
-    if(items.public_key) {
-      $('#public-key').val(items.public_key);
+  chrome.storage.local.get('publicKey', function(items) {
+    if (items.publicKey) {
+      $('#public-key').val(items.publicKey);
     }
   });
 })();

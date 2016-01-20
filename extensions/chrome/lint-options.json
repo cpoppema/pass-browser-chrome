@@ -13,6 +13,7 @@
   "trailing": true,
   "boss": true,
   "eqnull": true,
+  "validthis": true,
   "globals": {
     "beforeEach": true,
     "describe": true,

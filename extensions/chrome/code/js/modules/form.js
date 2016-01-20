@@ -4,12 +4,30 @@
 //
 // no unit tests for this module, it is jQuery manipulation mostly.
 //
+'use strict';
 
 var $ = require('../libs/jquery');
 var msg = require('../modules/msg').init('popup');
 
 module.exports.init = function(callback) {
   $(function() {
+    function disableUnlock() {
+      $('#unlock-form').off('submit');
+      $('#unlock-form').hide();
+      $('#unlock').removeClass('active');
+    }
+
+    function enableSecrets() {
+      disableUnlock();
+
+      $('#secrets').show();
+    }
+
+    function disableSecrets() {
+      $('#secrets').hide();
+      $('#secrets').html('');
+    }
+
     function enableUnlock() {
       disableSecrets();
 
@@ -24,7 +42,7 @@ module.exports.init = function(callback) {
 
         // unlock in background.js
         msg.bg('unlock', passphrase, function(unlocked) {
-          if(unlocked) {
+          if (unlocked) {
             // start progress while retrieving secrets from server
             var progressJs = require('../libs/progress').progressJs('#unlock')
               .setOptions({
@@ -35,13 +53,13 @@ module.exports.init = function(callback) {
             progressJs.autoIncrease(100);
 
             msg.bg('getSecrets', function(data) {
-              if(data.error) {
+              if (data.error) {
                 progressJs.end();
                 $('#unlock')
                   .removeClass('btn-primary btn-danger btn-success')
                   .addClass('btn-warning');
 
-                if(data.error < 500) {
+                if (data.error < 500) {
                   $('#unlock span').text(data.response.error);
                 } else {
                   msg.bg('notify', 'pass-private-server-server-error', {
@@ -64,7 +82,7 @@ module.exports.init = function(callback) {
                   enableSecrets();
 
                   // loop through secrets and show progress if any
-                  if(data.secrets.length) {
+                  if (data.secrets.length) {
                     var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
                     secretsList.appendTo($('#secrets'));
 
@@ -76,7 +94,7 @@ module.exports.init = function(callback) {
                           $(elem).text($(elem).data('reset-text'));
                           $(elem).removeClass('copied label-primary');
                         });
-                        if(!$(event.target).data('reset-text')) {
+                        if (!$(event.target).data('reset-text')) {
                           $(event.target).data('reset-text', $(event.target).text());
                         }
                         $(event.target).text($(event.target).data('copied-text'));
@@ -92,7 +110,7 @@ module.exports.init = function(callback) {
                           $(elem).text($(elem).data('reset-text'));
                           $(elem).removeClass('copied label-primary');
                         });
-                        if(!$(event.target).data('reset-text')) {
+                        if (!$(event.target).data('reset-text')) {
                           $(event.target).data('reset-text', $(event.target).text());
                         }
                         $(event.target).text($(event.target).data('copied-text'));
@@ -115,9 +133,9 @@ module.exports.init = function(callback) {
                     var progressIncrement = Math.ceil(100 / data.secrets.length);
 
                     $.each(data.secrets.sort(function(secret1, secret2) {
-                        // localeCompare is case-insensitive
-                        return (secret1.domain.localeCompare(secret2.domain) ||
-                                secret1.username.localeCompare(secret2.username));
+                      // localeCompare is case-insensitive
+                      return (secret1.domain.localeCompare(secret2.domain) ||
+                              secret1.username.localeCompare(secret2.username));
                     }), function(i, secret) {
                       setTimeout(function() {
                         // add secret to list
@@ -138,8 +156,8 @@ module.exports.init = function(callback) {
                     }, data.secrets.length * 100);
                   } else {
                     // no secrets retrieved from server
-                    if(data.error) {
-
+                    if (data.error) {
+                      console.log(data.error);
                     } else {
                       var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
                       noSecretsMessage.appendTo($('#secrets'));
@@ -157,23 +175,6 @@ module.exports.init = function(callback) {
         });
         event.preventDefault();
       });
-    }
-
-    function disableUnlock() {
-      $('#unlock-form').off('submit');
-      $('#unlock-form').hide();
-      $('#unlock').removeClass('active');
-    }
-
-    function enableSecrets() {
-      disableUnlock();
-
-      $('#secrets').show();
-    }
-
-    function disableSecrets() {
-      $('#secrets').hide();
-      $('#secrets').html('');
     }
 
     function restorePopup() {

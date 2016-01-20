@@ -1,4 +1,6 @@
-;(function() {
+'use strict';
+
+(function() {
 
   console.log('BACKGROUND SCRIPT WORKS!');
 
@@ -56,8 +58,8 @@
   var handlers = {
     unlock: function(passphrase, done) {
       // retrieve private key to test passphrase
-      chrome.storage.local.get('private_key', function(items) {
-        var privateKey = openpgp.key.readArmored(items.private_key).keys[0];
+      chrome.storage.local.get('privateKey', function(items) {
+        var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
         var unlocked = privateKey.decrypt(passphrase);
         done(unlocked);
       });
@@ -69,7 +71,7 @@
         var secretsUri = server + '/secrets/';
 
         function handler() {
-          if(this.status === 200 &&
+          if (this.status === 200 &&
             this.responseText !== null) {
             // success!
             done({
@@ -85,9 +87,9 @@
           }
         }
 
-        chrome.storage.local.get('public_key', function(items) {
+        chrome.storage.local.get('publicKey', function(items) {
           // provide public key id as authentication
-          var publicKey = openpgp.key.readArmored(items.public_key).keys[0];
+          var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
           var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
 
           var client = new XMLHttpRequest();
