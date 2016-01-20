@@ -76,93 +76,96 @@ module.exports.init = function(callback) {
                   $('#unlock')
                     .removeClass('btn-primary btn-warning btn-danger')
                     .addClass('btn-success');
+                  $('#unlock span').text('Unlocked');
                   progressJs.end();
 
-                  // hide unlock form and switch to secrets
-                  enableSecrets();
+                  setTimeout(function() {
+                    // hide unlock form and switch to secrets
+                    enableSecrets();
 
-                  // loop through secrets and show progress if any
-                  if (data.secrets.length) {
-                    var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
-                    secretsList.appendTo($('#secrets'));
+                    // loop through secrets and show progress if any
+                    if (data.secrets.length) {
+                      var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
+                      secretsList.appendTo($('#secrets'));
 
-                    // bind copy/show events
-                    $('#list').on('click', '.username-copy', function(event) {
-                      var username = $(event.target).closest('.secret').find('.username');
-                      msg.bg('copyUsername', username.val(), function() {
-                        $('.copied').each(function(i, elem) {
-                          $(elem).text($(elem).data('reset-text'));
-                          $(elem).removeClass('copied label-primary');
+                      // bind copy/show events
+                      $('#list').on('click', '.username-copy', function(event) {
+                        var username = $(event.target).closest('.secret').find('.username');
+                        msg.bg('copyUsername', username.val(), function() {
+                          $('.copied').each(function(i, elem) {
+                            $(elem).text($(elem).data('reset-text'));
+                            $(elem).removeClass('copied label-primary');
+                          });
+                          if (!$(event.target).data('reset-text')) {
+                            $(event.target).data('reset-text', $(event.target).text());
+                          }
+                          $(event.target).text($(event.target).data('copied-text'));
+                          $(event.target).addClass('copied label-primary');
                         });
-                        if (!$(event.target).data('reset-text')) {
-                          $(event.target).data('reset-text', $(event.target).text());
-                        }
-                        $(event.target).text($(event.target).data('copied-text'));
-                        $(event.target).addClass('copied label-primary');
                       });
-                    });
-                    $('#list').on('click', '.password-copy', function(event) {
-                      var secret = $(event.target).closest('.secret');
-                      var path = secret.data('path');
-                      var username = secret.data('username');
-                      msg.bg('copyPassword', path, username, function() {
-                        $('.copied').each(function(i, elem) {
-                          $(elem).text($(elem).data('reset-text'));
-                          $(elem).removeClass('copied label-primary');
+                      $('#list').on('click', '.password-copy', function(event) {
+                        var secret = $(event.target).closest('.secret');
+                        var path = secret.data('path');
+                        var username = secret.data('username');
+                        msg.bg('copyPassword', path, username, function() {
+                          $('.copied').each(function(i, elem) {
+                            $(elem).text($(elem).data('reset-text'));
+                            $(elem).removeClass('copied label-primary');
+                          });
+                          if (!$(event.target).data('reset-text')) {
+                            $(event.target).data('reset-text', $(event.target).text());
+                          }
+                          $(event.target).text($(event.target).data('copied-text'));
+                          $(event.target).addClass('copied label-primary');
                         });
-                        if (!$(event.target).data('reset-text')) {
-                          $(event.target).data('reset-text', $(event.target).text());
-                        }
-                        $(event.target).text($(event.target).data('copied-text'));
-                        $(event.target).addClass('copied label-primary');
                       });
-                    });
-                    $('#list').on('click', '.password-show', function(event) {
-                      var secret = $(event.target).closest('.secret');
-                      var path = secret.data('path');
-                      var username = secret.data('username');
-                      msg.bg('getPassword', path, username, function(password) {
-                        $(secret).find('.password').val(password);
+                      $('#list').on('click', '.password-show', function(event) {
+                        var secret = $(event.target).closest('.secret');
+                        var path = secret.data('path');
+                        var username = secret.data('username');
+                        msg.bg('getPassword', path, username, function(password) {
+                          $(secret).find('.password').val(password);
+                        });
                       });
-                    });
 
-                    // start progress while building list
-                    progressJs = require('../libs/progress').progressJs('#list');
-                    progressJs.start();
-                    progressJs.increase(5);
-                    var progressIncrement = Math.ceil(100 / data.secrets.length);
+                      // start progress while building list
+                      progressJs = require('../libs/progress').progressJs('#list');
+                      progressJs.start();
+                      progressJs.increase(5);
+                      var progressIncrement = Math.ceil(100 / data.secrets.length);
 
-                    $.each(data.secrets.sort(function(secret1, secret2) {
-                      // localeCompare is case-insensitive
-                      return (secret1.domain.localeCompare(secret2.domain) ||
-                              secret1.username.localeCompare(secret2.username));
-                    }), function(i, secret) {
+                      $.each(data.secrets.sort(function(secret1, secret2) {
+                        // localeCompare is case-insensitive
+                        return (secret1.domain.localeCompare(secret2.domain) ||
+                                secret1.username.localeCompare(secret2.username));
+                      }), function(i, secret) {
+                        setTimeout(function() {
+                          // add secret to list
+                          var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
+                          secretTemplate.find('.domain').text(secret.domain);
+                          secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
+                          secretTemplate
+                            .attr('data-path', secret.path)
+                            .attr('data-username', secret.username);
+                          secretTemplate.appendTo($('#list'));
+
+                          // show progress
+                          progressJs.increase(progressIncrement);
+                        }, i * 100);
+                      });
                       setTimeout(function() {
-                        // add secret to list
-                        var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
-                        secretTemplate.find('.domain').text(secret.domain);
-                        secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
-                        secretTemplate
-                          .attr('data-path', secret.path)
-                          .attr('data-username', secret.username);
-                        secretTemplate.appendTo($('#list'));
-
-                        // show progress
-                        progressJs.increase(progressIncrement);
-                      }, i * 100);
-                    });
-                    setTimeout(function() {
-                      progressJs.end();
-                    }, data.secrets.length * 100);
-                  } else {
-                    // no secrets retrieved from server
-                    if (data.error) {
-                      console.log(data.error);
+                        progressJs.end();
+                      }, data.secrets.length * 100);
                     } else {
-                      var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
-                      noSecretsMessage.appendTo($('#secrets'));
+                      // no secrets retrieved from server
+                      if (data.error) {
+                        console.log(data.error);
+                      } else {
+                        var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
+                        noSecretsMessage.appendTo($('#secrets'));
+                      }
                     }
-                  }
+                  }, 500);
                 }, 1000);
               }
             });
