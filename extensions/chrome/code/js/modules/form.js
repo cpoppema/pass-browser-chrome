@@ -7,10 +7,14 @@
 'use strict';
 
 var $ = require('../libs/jquery');
-var msg = require('../modules/msg').init('popup');
+var msg = require('../modules/msg').init('form');
 
 module.exports.init = function(callback) {
   $(function() {
+    function clearAlerts() {
+      $('.alerts').html('');
+    }
+
     function disableUnlock() {
       $('#unlock-form').off('submit');
       $('#unlock-form').hide();
@@ -42,7 +46,17 @@ module.exports.init = function(callback) {
 
         // unlock in background.js
         msg.bg('unlock', passphrase, function(unlocked) {
-          if (unlocked) {
+          if (unlocked === null) {
+            // create alert
+            var alertElem = $('<div role="alert">').addClass('alert alert-danger')
+              .text('You must generate and save a key first. Go to options to do so.');
+
+            // clear any existing alerts
+            clearAlerts();
+
+            // show new alert
+            $(alertElem).appendTo($('.alerts'));
+          } else if (unlocked) {
             // start progress while retrieving secrets from server
             var progressJs = require('../libs/progress').progressJs('#unlock')
               .setOptions({

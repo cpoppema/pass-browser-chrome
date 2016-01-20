@@ -60,8 +60,12 @@
       // retrieve private key to test passphrase
       chrome.storage.local.get('privateKey', function(items) {
         var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-        var unlocked = privateKey.decrypt(passphrase);
-        done(unlocked);
+        if (typeof privateKey === typeof void 0) {
+          done(null);
+        } else {
+          var unlocked = privateKey.decrypt(passphrase);
+          done(unlocked);
+        }
       });
     },
 

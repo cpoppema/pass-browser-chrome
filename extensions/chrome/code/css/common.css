@@ -42,11 +42,11 @@ body {
 }
 
 #list .list-group-item-text input.username {
-  max-width: 210px;
+  width: 200px;
 }
 
 #list .list-group-item-text input.password {
-  max-width: 160px;
+  width: 160px;
 }
 
 .username-copy,
