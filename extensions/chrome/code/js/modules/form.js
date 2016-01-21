@@ -102,6 +102,9 @@ module.exports.init = function(callback) {
                     // loop through secrets and show progress if any
                     if (data.secrets.length) {
                       var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
+                      var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
+
+                      // show search + list
                       secretsList.appendTo($('#secrets'));
 
                       // bind copy/show events
@@ -123,40 +126,55 @@ module.exports.init = function(callback) {
                         var secret = $(event.target).closest('.secret');
                         var path = secret.data('path');
                         var username = secret.data('username');
-                        msg.bg('copyPassword', path, username, function() {
-                          $('.copied').each(function(i, elem) {
-                            $(elem).text($(elem).data('reset-text'));
-                            $(elem).removeClass('copied label-primary');
-                          });
-                          if (!$(event.target).data('reset-text')) {
-                            $(event.target).data('reset-text', $(event.target).text());
+                        msg.bg('copyPassword', path, username, function(result) {
+                          if(result.error) {
+                            $(event.target).removeClass('copied label-primary');
+                            $(event.target).addClass('label-danger');
+                          } else {
+                            $('.copied').each(function(i, elem) {
+                              $(elem).text($(elem).data('reset-text'));
+                              $(elem).removeClass('copied label-primary');
+                            });
+                            if (!$(event.target).data('reset-text')) {
+                              $(event.target).data('reset-text', $(event.target).text());
+                            }
+                            $(event.target).text($(event.target).data('copied-text'));
+                            $(event.target).removeClass('label-danger');
+                            $(event.target).addClass('copied label-primary');
                           }
-                          $(event.target).text($(event.target).data('copied-text'));
-                          $(event.target).addClass('copied label-primary');
                         });
                       });
                       $('#list').on('click', '.password-show', function(event) {
+                        var hiddenPasswordText = secretTemplate.find('input.password').val();
                         var secret = $(event.target).closest('.secret');
                         var path = secret.data('path');
                         var username = secret.data('username');
-                        msg.bg('getPassword', path, username, function(password) {
-                          $(secret).find('.password').val(password);
+                        msg.bg('showPassword', path, username, function(result) {
+                          if(result.error) {
+                            $(secret).find('.password').val(hiddenPasswordText);
+                            $(event.target).removeClass('label-success');
+                            $(event.target).addClass('label-danger');
+                          } else {
+                            $(secret).find('.password').val(result.password);
+                            $(event.target).removeClass('label-danger');
+                            $(event.target).addClass('label-success');
+                          }
                         });
                       });
 
                       // add secrets to DOM
                       $.each(data.secrets, function(i, secret) {
+                        var template = secretTemplate.clone();
                         // add secret to list
-                        var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
-                        secretTemplate.find('.domain').text(secret.domain);
-                        secretTemplate.find('.username').val(secret.username).attr('title', secret.username);
-                        secretTemplate
+                        template.find('.domain').text(secret.domain);
+                        template.find('.username').val(secret.username).attr('title', secret.username);
+                        template
                           .attr('data-domain', secret.domain)
                           .attr('data-path', secret.path)
                           .attr('data-username', secret.username)
                           // do not display initially
                           .css('display', 'none');  // .hide() won't work
-                        secretTemplate.appendTo($('#list'));
+                        template.appendTo($('#list'));
                       });
 
                       var animationDelay = 150;
@@ -186,6 +204,8 @@ module.exports.init = function(callback) {
                                 var lastQuery = items.lastQuery;
                                 if (lastQuery) {
                                   $('#search').val(lastQuery);
+                                  $('#search').focus();
+                                  $('#search').select();
                                   filterSecrets(lastQuery);
                                 }
                               });

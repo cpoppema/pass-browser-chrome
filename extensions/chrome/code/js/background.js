@@ -4,41 +4,11 @@
 
   console.log('BACKGROUND SCRIPT WORKS!');
 
-  // here we use SHARED message handlers, so all the contexts support the same
-  // commands. in background, we extend the handlers with two special
-  // notification hooks. but this is NOT typical messaging system usage, since
-  // you usually want each context to handle different commands. for this you
-  // don't need handlers factory as used below. simply create individual
-  // `handlers` object for each context and pass it to msg.init() call. in case
-  // you don't need the context to support any commands, but want the context to
-  // cooperate with the rest of the extension via messaging system (you want to
-  // know when new instance of given context is created / destroyed, or you want
-  // to be able to issue command requests from this context), you may simply
-  // omit the `hadnlers` parameter for good when invoking msg.init()
-  // var handlers = require('./modules/handlers').create('bg');
-  // // adding special background notification handlers onConnect / onDisconnect
-  // function logEvent(ev, context, tabId) {
-  //   console.log(ev + ': context = ' + context + ', tabId = ' + tabId);
-  // }
-  // handlers.onConnect = logEvent.bind(null, 'onConnect');
-  // handlers.onDisconnect = logEvent.bind(null, 'onDisconnect');
-  // var msg = require('./modules/msg').init('bg', handlers);
+  var openpgp = require('openpgp');
 
-  // // issue `echo` command in 10 seconds after invoked,
-  // // schedule next run in 5 minutes
-  // function helloWorld() {
-  //   console.log('===== will broadcast "hello world!" in 10 seconds');
-  //   setTimeout(function() {
-  //     console.log('>>>>> broadcasting "hello world!" now');
-  //     msg.bcast('echo', 'hello world!', function() {
-  //       console.log('<<<<< broadcasting done');
-  //     });
-  //   }, 10 * 1000);
-  //   setTimeout(helloWorld, 5 * 60 * 1000);
-  // }
-
-  // // start broadcasting loop
-  // helloWorld();
+  // remember the passphrase to get secrets while in the popup, this is cleared
+  // when the popup hides
+  var __passphrase = null;
 
   /**
    * Helper function to copy text to clipboard.
@@ -53,10 +23,65 @@
     input.remove();
   }
 
-  var openpgp = require('openpgp');
+  /**
+   * Retrieve password from server.
+   */
+  function __getPassword(path, username, done) {
+    chrome.storage.local.get('server', function(items) {
+      var server = items.server || 'http://localhost:8080';
+      var secretsUri = server + '/secret/';
+
+      function handler() {
+        if (this.status === 200 &&
+          this.responseText !== null) {
+          var responseText = this.responseText;
+
+          chrome.storage.local.get('privateKey', function(items) {
+            var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+            privateKey.decrypt(__passphrase);
+
+            var pgpMessage = openpgp.message.readArmored(responseText);
+            openpgp.decryptMessage(privateKey, pgpMessage).then(function(plaintext) {
+              // success!
+              done({
+                error: null,
+                password: plaintext
+              });
+            }).catch(function(error) {
+              // something went wrong
+              done({
+                error: 1,
+                response: 'Unknown error'
+              });
+            });
+          });
+        } else {
+          // something went wrong
+          done({
+            error: this.status,
+            response: JSON.parse(this.responseText)
+          });
+        }
+      }
+
+      chrome.storage.local.get('publicKey', function(items) {
+        // provide public key id as authentication
+        var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
+        var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+
+        var client = new XMLHttpRequest();
+        client.onload = handler;
+        client.open('POST', secretsUri);
+        client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+        client.send(JSON.stringify({keyId: keyId, path: path, username: username}));
+      });
+    });
+  }
 
   var handlers = {
     unlock: function(passphrase, done) {
+      __passphrase = passphrase;
+
       // retrieve private key to test passphrase
       chrome.storage.local.get('privateKey', function(items) {
         var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
@@ -112,30 +137,31 @@
     },
 
     copyPassword: function(path, username, done) {
-      // get password from server
+      __getPassword(path, username, function(result) {
+        if (!result.error) {
+          // copy
+          copyToClipboard(result.password);
 
-      // decrypt
-      var password = '******';
-
-      // copy
-      copyToClipboard(password);
-
-      done();
+          // clear
+          result.password = null;
+        }
+        done(result);
+      });
     },
 
-    getPassword: function(path, username, done) {
-      // get password from server
-
-      // decrypt
-      var password = '++++++';
-
-      // return password
-      done(password);
+    showPassword: function(path, username, done) {
+      __getPassword(path, username, done);
     },
 
     notify: function(notificationId, options) {
       console.log(options);
       chrome.notifications.create(notificationId, options);
+    },
+
+    onDisconnect: function(context, tabId) {
+      if (context === 'form') {
+        __passphrase = null;
+      }
     }
   };
 

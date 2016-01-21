@@ -53,4 +53,5 @@ body {
 .password-show,
 .password-copy {
   cursor: pointer;
+  user-select: none;
 }
