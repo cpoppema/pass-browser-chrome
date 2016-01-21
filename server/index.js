@@ -2,9 +2,11 @@
 
 var bodyParser = require('body-parser')
   , connect = require('connect')
+  , crc = require('crc')
   , errorHandler = require('errorhandler')
   , fileStreamRotator = require('file-stream-rotator')
   , fs = require('fs')
+  , fsAccess = require('fs-access')
   , http = require('http')
   , https = require('https')
   , morgan = require('morgan')
@@ -111,10 +113,97 @@ app.use('/secrets', function(req, res) {
       // localeCompare is case-insensitive
       return (secret1.domain.localeCompare(secret2.domain) ||
               secret1.username.localeCompare(secret2.username));
-    })
+    });
 
     res.writeHead(200, {'Content-Type': 'application/json'})
     res.end(JSON.stringify(secrets, null, 2))
+  });
+});
+
+app.use('/secret', function(req, res) {
+  var passwordDir = process.env.PASSWORD_STORE_DIR;
+
+  var relPath = req.body.path;
+  if (typeof relPath === typeof void 0) {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({
+      'error': 'Invalid secret requested.'
+    }, null, 2));
+  }
+  var username = req.body.username;
+  if (typeof username === typeof void 0) {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({
+      'error': 'Invalid secret requested.'
+    }, null, 2));
+  }
+
+  var secretPath = path.resolve(path.normalize(path.join(passwordDir, relPath, username + '.gpg')));
+  if (path.relative(passwordDir, secretPath).substr(0, 2) === '..') {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({
+      'error': 'Invalid secret requested.'
+    }, null, 2));
+  }
+
+  fs.stat(secretPath, function(err, fileStats) {
+    if (err) {
+      if (err.errno === 34 || err.errno === -2) {
+        res.writeHead(503, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({
+          'error': 'Key file (.gpg-id) does not exist.'
+        }, null, 2));
+      } else {
+        res.writeHead(500, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({
+          'error': 'Unknown error.'
+        }, null, 2));
+      }
+    } else {
+      if (!fileStats.isFile()) {
+        res.writeHead(400, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({
+          'error': 'Invalid secret requested.'
+        }, null, 2));
+      } else {
+        fsAccess(secretPath, function(err) {
+          if (err) {
+            res.writeHead(503, {'Content-Type': 'application/json'});
+            res.end(JSON.stringify({
+              'error': 'Secret file is not readable.'
+            }, null, 2));
+          } else {
+            fs.readFile(secretPath, function(err, data) {
+              if(err) {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  'error': 'Unknown error.'
+                }, null, 2));
+              } else {
+                // build ascii armored pgp message
+                var checksum = function() {
+                  var c = crc.crc24(data);
+                  return new Buffer('' +
+                      String.fromCharCode(c >> 16) +
+                      String.fromCharCode((c >> 8) & 0xFF) +
+                      String.fromCharCode(c & 0xFF),
+                    'ascii').toString('base64');
+                }();
+
+                var pgpMessage = '';
+                pgpMessage += '-----BEGIN PGP MESSAGE-----\n\n';
+                pgpMessage += data.toString('base64') + '\n';
+                pgpMessage += '=' + checksum + '\n';
+                pgpMessage += '-----END PGP MESSAGE-----';
+
+                res.writeHead(200, {'Content-Type': 'text/plain'});
+                res.end(pgpMessage);
+              }
+            });
+          }
+        });
+      }
+    }
   });
 });
 
