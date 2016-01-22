@@ -4,7 +4,8 @@
   "description": "Read secrets from a nodejs server exposing a person's ~/.password-store",
   "dependencies": {
     "bootstrap": "^4.0.0-alpha.2",
-    "openpgp": "^1.4.1"
+    "openpgp": "^1.4.1",
+    "parse-domain": "^0.2.0"
   },
   "devDependencies": {
     "grunt": "~0.4.5",

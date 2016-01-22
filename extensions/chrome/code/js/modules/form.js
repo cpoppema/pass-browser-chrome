@@ -17,25 +17,25 @@ module.exports.init = function(callback) {
       $('.alerts').empty();
     }
 
-    function disableUnlock() {
+    function hideUnlock() {
       $('#unlock-form').off('submit');
       $('#unlock-form').hide();
       $('#unlock').removeClass('active');
     }
 
-    function enableSecrets() {
-      disableUnlock();
+    function showSecrets() {
+      hideUnlock();
 
       $('#secrets').show();
     }
 
-    function disableSecrets() {
+    function hideSecrets() {
       $('#secrets').hide();
       $('#secrets').empty();
     }
 
-    function enableUnlock() {
-      disableSecrets();
+    function showUnlock() {
+      hideSecrets();
 
       $('#unlock-form').on('submit', function resetUnlockButton() {
         // reset unlock button's styling
@@ -97,7 +97,7 @@ module.exports.init = function(callback) {
 
                   setTimeout(function() {
                     // hide unlock form and switch to secrets
-                    enableSecrets();
+                    showSecrets();
 
                     // loop through secrets and show progress if any
                     if (data.secrets.length) {
@@ -108,7 +108,7 @@ module.exports.init = function(callback) {
                       secretsList.appendTo($('#secrets'));
 
                       // bind copy/show events
-                      $('#list').on('click', '.username-copy', function(event) {
+                      $('.container').on('click', '.username-copy', function(event) {
                         var username = $(event.target).closest('.secret').find('.username');
                         msg.bg('copyUsername', username.val(), function() {
                           $('.copied').each(function(i, elem) {
@@ -122,7 +122,7 @@ module.exports.init = function(callback) {
                           $(event.target).addClass('copied label-primary');
                         });
                       });
-                      $('#list').on('click', '.password-copy', function(event) {
+                      $('.container').on('click', '.password-copy', function(event) {
                         var secret = $(event.target).closest('.secret');
                         var path = secret.data('path');
                         var username = secret.data('username');
@@ -144,7 +144,7 @@ module.exports.init = function(callback) {
                           }
                         });
                       });
-                      $('#list').on('click', '.password-show', function(event) {
+                      $('.container').on('click', '.password-show', function(event) {
                         var hiddenPasswordText = secretTemplate.find('input.password').val();
                         var secret = $(event.target).closest('.secret');
                         var path = secret.data('path');
@@ -162,7 +162,7 @@ module.exports.init = function(callback) {
                         });
                       });
 
-                      // add secrets to DOM
+                      // add secrets to #all-secrets
                       $.each(data.secrets, function(i, secret) {
                         var template = secretTemplate.clone();
                         // add secret to list
@@ -174,46 +174,46 @@ module.exports.init = function(callback) {
                           .attr('data-username', secret.username)
                           // do not display initially
                           .css('display', 'none');  // .hide() won't work
-                        template.appendTo($('#list'));
+                        template.appendTo($('#all-secrets'));
                       });
 
                       var animationDelay = 150;
                       // start progress while building list
                       var progressIncrement = Math.ceil(100 / data.secrets.length);
-                      progressJs = require('../libs/progress').progressJs('#list');
+                      progressJs = require('../libs/progress').progressJs('#all-secrets');
                       progressJs.start().autoIncrease(progressIncrement, animationDelay);
 
-                      // make secrets visible
-                      $.each(data.secrets, function(i, secret) {
-                        setTimeout(function() {
-                          // show element
-                          var secretElem = $('.secret[data-path="' + secret.path + '"]:not(:visible):first');
-                          secretElem.show();
+                      // place domain matches on top, with subdomain
+                      // matches first
+                      fillTopSecrets(function() {
+                        // make secrets visible
+                        $.each($('.secret'), function(i, secretElem) {
+                          setTimeout(function() {
+                            // show element
+                            $(secretElem).show();
 
-                          // show progress
-                          progressJs.set((i + 1) * progressIncrement);
+                            if ((i + 1) === data.secrets.length) {
+                              // end progress
+                              progressJs.end();
 
-                          if ((i + 1) === data.secrets.length) {
-                            // end progress
-                            progressJs.end();
-
-                            // filter list on render finish
-                            var currentQuery = $('#search').val().trim();
-                            if (!currentQuery) {
-                              chrome.storage.local.get('lastQuery', function(items) {
-                                var lastQuery = items.lastQuery;
-                                if (lastQuery) {
-                                  $('#search').val(lastQuery);
-                                  $('#search').focus();
-                                  $('#search').select();
-                                  filterSecrets(lastQuery);
-                                }
-                              });
-                            } else {
-                              filterSecrets(currentQuery);
+                              // filter list on render finish
+                              var currentQuery = $('#search').val().trim();
+                              if (!currentQuery) {
+                                chrome.storage.local.get('lastQuery', function(items) {
+                                  var lastQuery = items.lastQuery;
+                                  if (lastQuery) {
+                                    $('#search').val(lastQuery);
+                                    $('#search').focus();
+                                    $('#search').select();
+                                    filterSecrets(lastQuery);
+                                  }
+                                });
+                              } else {
+                                filterSecrets(currentQuery);
+                              }
                             }
-                          }
-                        }, i * animationDelay);
+                          }, i * animationDelay);
+                        });
                       });
                     } else {
                       // no secrets retrieved from server
@@ -275,7 +275,46 @@ module.exports.init = function(callback) {
       });
     });
 
+    function fillTopSecrets(done) {
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        var parseDomain = require('parse-domain');
+        var parts = parseDomain(tabs[0].url);
+        var currentSubdomain = [parts.subdomain, parts.domain, parts.tld].join('.');
+        var currentDomain = [parts.domain, parts.tld].join('.');
+
+        // find matches
+        var subdomainMatches = [];
+        var domainMatches = [];
+        $('#all-secrets .secret').each(function(i, secretElem) {
+          var secretDomain = $(secretElem).attr('data-domain');
+
+          // move matches to #top-list
+          if(secretDomain.indexOf(currentSubdomain) === 0) {
+            subdomainMatches.push($(secretElem).clone());
+            $(secretElem).remove();
+          }
+          if(secretDomain.indexOf(currentDomain) === 0) {
+            domainMatches.push($(secretElem).clone());
+            $(secretElem).remove();
+          }
+        });
+
+        // add matches in order to #top-secrets
+        if(subdomainMatches.length + domainMatches.length) {
+          $('#top-secrets').show();
+          $.each(subdomainMatches, function(i, secretElem) {
+            $(secretElem).appendTo($('#top-secrets'));
+          });
+          $.each(domainMatches, function(i, secretElem) {
+            $(secretElem).appendTo($('#top-secrets'));
+          });
+        }
+
+        done();
+      });
+    }
+
     // always show unlock form
-    enableUnlock();
+    showUnlock();
   });
 };

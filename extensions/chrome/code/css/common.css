@@ -28,24 +28,33 @@ body {
   border-top-right-radius: 0;
 }
 
-#list .list-group-item-heading,
-#list .list-group-item-text {
+#search-form {
+  margin-bottom: .625rem;
+}
+
+#top-secrets {
+  display: none;
+  margin-bottom: .625rem;
+}
+
+.secrets-list .list-group-item-heading,
+.secrets-list .list-group-item-text {
   max-width: 210px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-#list .list-group-item-text input {
+.secrets-list .list-group-item-text input {
   border: 0;
   padding: 0;
   margin: 0;
 }
 
-#list .list-group-item-text input.username {
+.secrets-list .list-group-item-text input.username {
   width: 200px;
 }
 
-#list .list-group-item-text input.password {
+.secrets-list .list-group-item-text input.password {
   width: 160px;
 }
 

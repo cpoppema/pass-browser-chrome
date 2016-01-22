@@ -29,7 +29,8 @@
         "<all_urls>",
         "clipboardWrite",
         "notifications",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "web_accessible_resources": [
         "js/*",
