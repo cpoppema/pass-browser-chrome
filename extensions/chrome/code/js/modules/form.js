@@ -88,29 +88,47 @@ module.exports.init = function(callback) {
                 }
               } else {
                 // succcess
+                $('#unlock')
+                  .removeClass('btn-primary btn-warning btn-danger')
+                  .addClass('btn-success');
+                $('#unlock span').text('Unlocked');
+                progressJs.end();
                 setTimeout(function() {
-                  $('#unlock')
-                    .removeClass('btn-primary btn-warning btn-danger')
-                    .addClass('btn-success');
-                  $('#unlock span').text('Unlocked');
-                  progressJs.end();
+                  // hide unlock form and switch to secrets
+                  showSecrets();
 
-                  setTimeout(function() {
-                    // hide unlock form and switch to secrets
-                    showSecrets();
+                  // loop through secrets and show progress if any
+                  if (data.secrets.length) {
+                    var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
+                    var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
 
-                    // loop through secrets and show progress if any
-                    if (data.secrets.length) {
-                      var secretsList = $($('#secrets-list-template').clone().get(0).content).children();
-                      var secretTemplate = $($('#secrets-list-item-template').clone().get(0).content).children();
+                    // show search + list
+                    secretsList.appendTo($('#secrets'));
 
-                      // show search + list
-                      secretsList.appendTo($('#secrets'));
-
-                      // bind copy/show events
-                      $('.container').on('click', '.username-copy', function(event) {
-                        var username = $(event.target).closest('.secret').find('.username');
-                        msg.bg('copyUsername', username.val(), function() {
+                    // bind copy/show events
+                    $('.container').on('click', '.username-copy', function(event) {
+                      var username = $(event.target).closest('.secret').find('.username');
+                      msg.bg('copyUsername', username.val(), function() {
+                        $('.copied').each(function(i, elem) {
+                          $(elem).text($(elem).data('reset-text'));
+                          $(elem).removeClass('copied label-primary');
+                        });
+                        if (!$(event.target).data('reset-text')) {
+                          $(event.target).data('reset-text', $(event.target).text());
+                        }
+                        $(event.target).text($(event.target).data('copied-text'));
+                        $(event.target).addClass('copied label-primary');
+                      });
+                    });
+                    $('.container').on('click', '.password-copy', function(event) {
+                      var secret = $(event.target).closest('.secret');
+                      var path = secret.data('path');
+                      var username = secret.data('username');
+                      msg.bg('copyPassword', path, username, function(result) {
+                        if (result.error) {
+                          $(event.target).removeClass('copied label-primary');
+                          $(event.target).addClass('label-danger');
+                        } else {
                           $('.copied').each(function(i, elem) {
                             $(elem).text($(elem).data('reset-text'));
                             $(elem).removeClass('copied label-primary');
@@ -119,113 +137,93 @@ module.exports.init = function(callback) {
                             $(event.target).data('reset-text', $(event.target).text());
                           }
                           $(event.target).text($(event.target).data('copied-text'));
+                          $(event.target).removeClass('label-danger');
                           $(event.target).addClass('copied label-primary');
-                        });
+                        }
                       });
-                      $('.container').on('click', '.password-copy', function(event) {
-                        var secret = $(event.target).closest('.secret');
-                        var path = secret.data('path');
-                        var username = secret.data('username');
-                        msg.bg('copyPassword', path, username, function(result) {
-                          if(result.error) {
-                            $(event.target).removeClass('copied label-primary');
-                            $(event.target).addClass('label-danger');
-                          } else {
-                            $('.copied').each(function(i, elem) {
-                              $(elem).text($(elem).data('reset-text'));
-                              $(elem).removeClass('copied label-primary');
-                            });
-                            if (!$(event.target).data('reset-text')) {
-                              $(event.target).data('reset-text', $(event.target).text());
+                    });
+                    $('.container').on('click', '.password-show', function(event) {
+                      var hiddenPasswordText = secretTemplate.find('input.password').val();
+                      var secret = $(event.target).closest('.secret');
+                      var path = secret.data('path');
+                      var username = secret.data('username');
+                      msg.bg('showPassword', path, username, function(result) {
+                        if (result.error) {
+                          $(secret).find('.password').val(hiddenPasswordText);
+                          $(event.target).removeClass('label-success');
+                          $(event.target).addClass('label-danger');
+                        } else {
+                          $(secret).find('.password').val(result.password);
+                          $(event.target).removeClass('label-danger');
+                          $(event.target).addClass('label-success');
+                        }
+                      });
+                    });
+
+                    // add secrets to #all-secrets
+                    $.each(data.secrets, function(i, secret) {
+                      var template = secretTemplate.clone();
+                      // add secret to list
+                      template.find('.domain').text(secret.domain);
+                      template.find('.username').val(secret.username).attr('title', secret.username);
+                      template
+                        .attr('data-domain', secret.domain)
+                        .attr('data-path', secret.path)
+                        .attr('data-username', secret.username)
+                        // do not display initially
+                        .css('display', 'none');  // .hide() won't work
+                      template.appendTo($('#all-secrets'));
+                    });
+
+                    var animationDelay = 25;
+
+                    // start progress while building list
+                    var progressIncrement = Math.ceil(100 / data.secrets.length);
+                    progressJs = require('../libs/progress').progressJs('#all-secrets');
+                    progressJs.start().autoIncrease(progressIncrement, animationDelay);
+
+                    // place domain matches on top, with subdomain
+                    // matches first
+                    fillTopSecrets(function() {
+                      // make secrets visible
+                      $.each($('.secret'), function(i, secretElem) {
+                        setTimeout(function() {
+                          // show element
+                          $(secretElem).show();
+
+                          if ((i + 1) === data.secrets.length) {
+                            // end progress
+                            progressJs.end();
+
+                            // filter list on render finish
+                            var currentQuery = $('#search').val().trim();
+                            if (!currentQuery) {
+                              chrome.storage.local.get('lastQuery', function(items) {
+                                var lastQuery = items.lastQuery;
+                                if (lastQuery) {
+                                  $('#search').val(lastQuery);
+                                  $('#search').focus();
+                                  $('#search').select();
+                                  filterSecrets(lastQuery);
+                                }
+                              });
+                            } else {
+                              filterSecrets(currentQuery);
                             }
-                            $(event.target).text($(event.target).data('copied-text'));
-                            $(event.target).removeClass('label-danger');
-                            $(event.target).addClass('copied label-primary');
                           }
-                        });
+                        }, i * animationDelay);
                       });
-                      $('.container').on('click', '.password-show', function(event) {
-                        var hiddenPasswordText = secretTemplate.find('input.password').val();
-                        var secret = $(event.target).closest('.secret');
-                        var path = secret.data('path');
-                        var username = secret.data('username');
-                        msg.bg('showPassword', path, username, function(result) {
-                          if(result.error) {
-                            $(secret).find('.password').val(hiddenPasswordText);
-                            $(event.target).removeClass('label-success');
-                            $(event.target).addClass('label-danger');
-                          } else {
-                            $(secret).find('.password').val(result.password);
-                            $(event.target).removeClass('label-danger');
-                            $(event.target).addClass('label-success');
-                          }
-                        });
-                      });
-
-                      // add secrets to #all-secrets
-                      $.each(data.secrets, function(i, secret) {
-                        var template = secretTemplate.clone();
-                        // add secret to list
-                        template.find('.domain').text(secret.domain);
-                        template.find('.username').val(secret.username).attr('title', secret.username);
-                        template
-                          .attr('data-domain', secret.domain)
-                          .attr('data-path', secret.path)
-                          .attr('data-username', secret.username)
-                          // do not display initially
-                          .css('display', 'none');  // .hide() won't work
-                        template.appendTo($('#all-secrets'));
-                      });
-
-                      var animationDelay = 150;
-                      // start progress while building list
-                      var progressIncrement = Math.ceil(100 / data.secrets.length);
-                      progressJs = require('../libs/progress').progressJs('#all-secrets');
-                      progressJs.start().autoIncrease(progressIncrement, animationDelay);
-
-                      // place domain matches on top, with subdomain
-                      // matches first
-                      fillTopSecrets(function() {
-                        // make secrets visible
-                        $.each($('.secret'), function(i, secretElem) {
-                          setTimeout(function() {
-                            // show element
-                            $(secretElem).show();
-
-                            if ((i + 1) === data.secrets.length) {
-                              // end progress
-                              progressJs.end();
-
-                              // filter list on render finish
-                              var currentQuery = $('#search').val().trim();
-                              if (!currentQuery) {
-                                chrome.storage.local.get('lastQuery', function(items) {
-                                  var lastQuery = items.lastQuery;
-                                  if (lastQuery) {
-                                    $('#search').val(lastQuery);
-                                    $('#search').focus();
-                                    $('#search').select();
-                                    filterSecrets(lastQuery);
-                                  }
-                                });
-                              } else {
-                                filterSecrets(currentQuery);
-                              }
-                            }
-                          }, i * animationDelay);
-                        });
-                      });
+                    });
+                  } else {
+                    // no secrets retrieved from server
+                    if (data.error) {
+                      console.log(data.error);
                     } else {
-                      // no secrets retrieved from server
-                      if (data.error) {
-                        console.log(data.error);
-                      } else {
-                        var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
-                        noSecretsMessage.appendTo($('#secrets'));
-                      }
+                      var noSecretsMessage = $($('#no-secrets-template').clone().get(0).content).children();
+                      noSecretsMessage.appendTo($('#secrets'));
                     }
-                  }, 500);
-                }, 1000);
+                  }
+                }, 200);
               }
             });
           } else {
@@ -289,18 +287,18 @@ module.exports.init = function(callback) {
           var secretDomain = $(secretElem).attr('data-domain');
 
           // move matches to #top-list
-          if(secretDomain.indexOf(currentSubdomain) === 0) {
+          if (secretDomain.indexOf(currentSubdomain) === 0) {
             subdomainMatches.push($(secretElem).clone());
             $(secretElem).remove();
           }
-          if(secretDomain.indexOf(currentDomain) === 0) {
+          if (secretDomain.indexOf(currentDomain) === 0) {
             domainMatches.push($(secretElem).clone());
             $(secretElem).remove();
           }
         });
 
         // add matches in order to #top-secrets
-        if(subdomainMatches.length + domainMatches.length) {
+        if (subdomainMatches.length + domainMatches.length) {
           $('#top-secrets').show();
           $.each(subdomainMatches, function(i, secretElem) {
             $(secretElem).appendTo($('#top-secrets'));

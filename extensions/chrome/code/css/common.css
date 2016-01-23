@@ -39,9 +39,16 @@ body {
 
 .secrets-list .list-group-item-heading,
 .secrets-list .list-group-item-text {
-  max-width: 210px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.secrets-list .list-group-item-heading {
+  max-width: 260px;
+}
+
+.secrets-list .list-group-item-text {
+  max-width: 210px;
 }
 
 .secrets-list .list-group-item-text input {
