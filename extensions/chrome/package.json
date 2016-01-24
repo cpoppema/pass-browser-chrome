@@ -5,7 +5,8 @@
   "dependencies": {
     "bootstrap": "^4.0.0-alpha.2",
     "openpgp": "^1.4.1",
-    "parse-domain": "^0.2.0"
+    "parse-domain": "^0.2.0",
+    "unorm": "^1.4.1"
   },
   "devDependencies": {
     "grunt": "~0.4.5",

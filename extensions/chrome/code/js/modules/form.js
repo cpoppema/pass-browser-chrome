@@ -8,7 +8,7 @@
 
 var $ = require('../libs/jquery');
 var msg = require('../modules/msg').init('form');
-
+var unorm = require('unorm');
 
 module.exports.init = function(callback) {
 
@@ -163,15 +163,17 @@ module.exports.init = function(callback) {
                     // add secrets to #all-secrets
                     $.each(data.secrets, function(i, secret) {
                       var template = secretTemplate.clone();
+
                       // add secret to list
                       template.find('.domain').text(secret.domain);
                       template.find('.username').val(secret.username).attr('title', secret.username);
                       template
                         .attr('data-domain', secret.domain)
                         .attr('data-path', secret.path)
+                        .attr('data-searchable-username', unorm.nfkd(secret.username))
                         .attr('data-username', secret.username)
                         // do not display initially
-                        .css('display', 'none');  // .hide() won't work
+                        .css('display', 'none');  // .hide() won't work yet
                       template.appendTo($('#all-secrets'));
                     });
 
@@ -254,7 +256,7 @@ module.exports.init = function(callback) {
       // filter list
       $('.secret').each(function(i, secretElem) {
         if (fuzzyContains($(secretElem).attr('data-domain'), query) ||
-            fuzzyContains($(secretElem).attr('data-username'), query)) {
+            fuzzyContains($(secretElem).attr('data-searchable-username'), query)) {
           $(secretElem).show();
         } else {
           $(secretElem).hide();
@@ -277,6 +279,11 @@ module.exports.init = function(callback) {
       chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         var parseDomain = require('parse-domain');
         var parts = parseDomain(tabs[0].url);
+        if (parts === null) {
+          // invalid domain (extension pages, settings etc.)
+          done();
+          return;
+        }
         var currentSubdomain = [parts.subdomain, parts.domain, parts.tld].join('.');
         var currentDomain = [parts.domain, parts.tld].join('.');
 
