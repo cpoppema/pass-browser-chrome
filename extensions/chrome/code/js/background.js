@@ -101,6 +101,12 @@
       openpgp.generateKeyPair(options).then(done);
     },
 
+    getIdForKey: function(key, done) {
+      var publicKey = openpgp.key.readArmored(key).keys[0];
+      var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+      done(keyId);
+    },
+
     getSecrets: function(done) {
       chrome.storage.local.get('server', function(items) {
         var server = items.server || 'http://localhost:8080';
@@ -124,15 +130,19 @@
         }
 
         chrome.storage.local.get('publicKey', function(items) {
-          // provide public key id as authentication
-          var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
-          var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+          if (items.publicKey) {
+            // provide public key id as authentication
+            var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
+            var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
 
-          var client = new XMLHttpRequest();
-          client.onload = handler;
-          client.open('POST', secretsUri);
-          client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-          client.send(JSON.stringify({keyId: keyId}));
+            var client = new XMLHttpRequest();
+            client.onload = handler;
+            client.open('POST', secretsUri);
+            client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            client.send(JSON.stringify({keyId: keyId}));
+          } else {
+            // error
+          }
         });
       });
     },

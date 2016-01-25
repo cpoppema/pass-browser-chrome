@@ -7,61 +7,106 @@
 
   var msg = require('./modules/msg').init('popup');
 
-  /**
-   * Save keys to 'chrome.local'.
-   */
-  function saveKeys() {
-    var publicKey = $('#public-key').val();
-    var privateKey = $('#private-key').val();
+  var keyPair = {
+    publicKey: null,
+    privateKey: null
+  };
 
-    chrome.storage.local.get('hasKey', function(items) {
-      chrome.storage.local.set({
-        hasKey: true,
-        publicKey: publicKey,
-        privateKey: privateKey
-      }, function() {
-        // Update status to let user know options were saved.
-        if (items.hasKey) {
-          $('#status').text('Key overwritten.');
+  $(function() {
+    // show key data on load
+    chrome.storage.local.get('publicKey', function(items) {
+      if (items.publicKey) {
+        $('#public-key').val(items.publicKey);
+
+        // get key id
+        msg.bg('getIdForKey', items.publicKey, function(keyId) {
+          $('#public-key-id').val(keyId);
+        });
+      }
+    });
+
+    $('#key-gen').click(function(event) {
+      // don't go anywhere
+      event.preventDefault();
+
+      // reset in-memory form values
+      keyPair = {
+        publicKey: null,
+        privateKey: null
+      };
+
+      // clear visible key, disable save
+      $('#public-key, #public-key-id').val('');
+      $('#save')
+        .removeClass('btn-success')
+        .prop('disabled', true);
+
+      // show warnings for required input
+      $.each($(event.target).closest('form').find(':input[required]'), function(i, inputElem) {
+        if (!$(inputElem).val().trim().length) {
+          $(inputElem)
+            .addClass('form-control-warning')
+            .closest('.form-group')
+            .addClass('has-warning');
         } else {
-          $('#status').text('Key saved.');
+          $(inputElem)
+            .removeClass('form-control-warning')
+            .closest('.form-group')
+            .removeClass('has-warning');
         }
-        setTimeout(function() {
-          $('#status').text('');
-        }, 750);
+      });
+
+      // stop if a form input still has an error
+      if ($(event.target).closest('form').find('.has-warning').length) {
+        $(event.target).closest('form').find('.has-warning:first :input').focus();
+        return;
+      }
+
+      // show indication of progress
+      $('#public-key').val('Generating..');
+
+      // generate keys and display data in form
+      var options = {
+        numBits: 2048,
+        userId: $('#key-name').val(),
+        passphrase: $('#passphrase').val()
+      };
+      msg.bg('generateKeys', options, function(keypair) {
+        keyPair.publicKey = keypair.publicKeyArmored;
+        keyPair.privateKey = keypair.privateKeyArmored;
+
+        $('#public-key').val(keyPair.publicKey);
+
+        $('#passphrase').val('');
+        $('#key-gen').prop('disabled', false);
+        $('#save')
+          .addClass('btn-success')
+          .prop('disabled', false);
+
+        // get key id
+        msg.bg('getIdForKey', keyPair.publicKey, function(keyId) {
+          $('#public-key-id').val(keyId);
+        });
       });
     });
-  }
-  $('#save').on('click', saveKeys);
 
-  /**
-   * Generate key and display in textarea.
-   */
-  function generateKey() {
-    $('#public-key').val('Generating..');
-    $('#private-key').val('');
-    $('#key-gen').prop('disabled', true);
-
-    var options = {
-      numBits: 2048,
-      userId: require('./libs/UUID').generate(),
-      passphrase: $('#passphrase').val()
-    };
-
-    msg.bg('generateKeys', options, function(keypair) {
-      $('#private-key').val(keypair.privateKeyArmored);
-      $('#public-key').val(keypair.publicKeyArmored);
-      $('#passphrase').val('');
-      $('#key-gen').prop('disabled', false);
-      $('#save').prop('disabled', false);
+    $('#save').click(function(event) {
+      chrome.storage.local.get('publicKey', function(items) {
+        chrome.storage.local.set({
+          publicKey: keyPair.publicKey,
+          privateKey: keyPair.privateKey
+        }, function() {
+          // update status to let user know options were saved
+          if (items.publicKey) {
+            $('#status').text('Key overwritten.');
+          } else {
+            $('#status').text('Key saved.');
+          }
+          setTimeout(function() {
+            $('#status').text('');
+          }, 750);
+        });
+      });
     });
-  }
-  $('#key-gen').on('click', generateKey);
-
-  // show key on load
-  chrome.storage.local.get('publicKey', function(items) {
-    if (items.publicKey) {
-      $('#public-key').val(items.publicKey);
-    }
   });
 })();

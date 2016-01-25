@@ -4,25 +4,43 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>pass-extension-chrome</title>
+    <link rel="stylesheet" type="text/css" href="../css/libs/bootstrap.css">
     <link rel="stylesheet" type="text/css" href="../css/options.css">
   </head>
   <body>
-    <p>Set a passphrase and press Generate key.</p>
-    <div id="key-container">
-      <label for="public-key">PGP key:</label>
-      <textarea id="public-key" name="public-key" readonly></textarea>
-      <input type="hidden" id="private-key" name="private-key">
+    <div class="container">
+      <div class="row">
+        <form>
+          <fieldset class="form-group">
+            <label for="key-name">Key name *</label>
+            <small class="text-muted">Name of this key to identify it with.</small>
+            <input type="text" id="key-name" class="form-control" name="key-name" placeholder="pass-extension" autofocus required>
+          </fieldset>
+          <fieldset class="form-group">
+            <label for="passphrase">Passphrase *</label>
+            <small class="text-muted">This password is required every time you want to access your passwords.</small>
+             <input type="password" id="passphrase" class="form-control" name="passphrase" required>
+          </fieldset>
+          <fieldset class="form-group">
+            <label for="passphrase">Public key</label>
+            <textarea id="public-key" name="public-key" class="form-control" disabled></textarea>
+          </fieldset>
+          <fieldset class="form-group">
+            <label for="key-name">Key ID</label>
+            <small class="text-muted">This is your public key ID.</small>
+            <div class="row">
+              <div class="col-xs-6">
+                <input type="text" id="public-key-id" class="form-control" name="key-id" disabled>
+              </div>
+            </div>
+          </fieldset>
+          <button type="submit" id="key-gen" class="btn btn-primary">Generate key</button>
+          <button type="button" id="save" class="btn btn-secondary" disabled>Save</button>
+          <span id="status"></span>
+        </form>
+
+        <script src="../js/options.js"></script>
+      </div>
     </div>
-
-    <p>
-      <label for="passphrase">Passphrase:</label>
-      <input type="password" id="passphrase" name="passphrase" autofocus>
-
-      <button id="key-gen">Generate key</button>
-      <button id="save" disabled>Save</button>
-      <span id="status"></span>
-    </p>
-
-    <script src="../js/options.js"></script>
   </body>
 </html>

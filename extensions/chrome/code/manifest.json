@@ -41,6 +41,6 @@
     "content_security_policy": "script-src 'self'; object-src 'self'",
     "options_ui": {
         "page": "html/options.html",
-        "chrome_style": true
+        "chrome_style": false
     }
 }
