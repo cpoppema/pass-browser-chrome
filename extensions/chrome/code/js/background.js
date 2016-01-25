@@ -107,6 +107,12 @@
       done(keyId);
     },
 
+    getUserIdForKey: function(key, done) {
+      var publicKey = openpgp.key.readArmored(key).keys[0];
+      var userId = publicKey.users[0].userId.userid;
+      done(userId);
+    },
+
     getSecrets: function(done) {
       chrome.storage.local.get('server', function(items) {
         var server = items.server || 'http://localhost:8080';

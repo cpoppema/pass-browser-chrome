@@ -13,8 +13,8 @@
   };
 
   $(function() {
-    // show key data on load
-    chrome.storage.local.get('publicKey', function(items) {
+    // show data on load
+    chrome.storage.local.get(['publicKey', 'server'], function(items) {
       if (items.publicKey) {
         $('#public-key').val(items.publicKey);
 
@@ -22,6 +22,13 @@
         msg.bg('getIdForKey', items.publicKey, function(keyId) {
           $('#public-key-id').val(keyId);
         });
+        // get user id
+        msg.bg('getUserIdForKey', items.publicKey, function(userId) {
+          $('#key-name').val(userId);
+        });
+      }
+      if (items.server) {
+        $('#server').val(items.server);
       }
     });
 
@@ -94,7 +101,8 @@
       chrome.storage.local.get('publicKey', function(items) {
         chrome.storage.local.set({
           publicKey: keyPair.publicKey,
-          privateKey: keyPair.privateKey
+          privateKey: keyPair.privateKey,
+          server: $('#server').val().trim()
         }, function() {
           // update status to let user know options were saved
           if (items.publicKey) {
