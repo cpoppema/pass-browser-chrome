@@ -1,7 +1,6 @@
 'use strict';
 
 (function() {
-
   console.log('BACKGROUND SCRIPT WORKS!');
 
   var openpgp = require('openpgp');
@@ -159,11 +158,11 @@
     },
 
     onDisconnect: function(context, tabId) {
-      if (context === 'form') {
+      if (context === 'popup') {
         __passphrase = null;
       }
     }
   };
 
-  var msg = require('./modules/msg').init('bg', handlers);
+  require('./modules/msg').init('bg', handlers);
 })();

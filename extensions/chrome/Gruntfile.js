@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = function(grunt) {
 
   var pkg = grunt.file.readJSON('package.json');
@@ -28,11 +30,6 @@ module.exports = function(grunt) {
       options: grunt.file.readJSON('lint-options.json'), // see http://www.jshint.com/docs/options/
       all: { src: ['package.json', 'lint-options.json', 'Gruntfile.js', 'code/**/*.js',
                    'code/**/*.json', '!code/js/libs/*'] }
-    },
-
-    mochaTest: {
-      options: { colors: true, reporter: 'spec' },
-      files: ['code/**/*.spec.js']
     },
 
     copy: {
@@ -92,7 +89,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-mkdir');
   grunt.loadNpmTasks('grunt-contrib-jshint');
-  grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-browserify');
   grunt.loadNpmTasks('grunt-exec');
@@ -116,19 +112,11 @@ module.exports = function(grunt) {
     }
   );
 
-  grunt.registerTask(
-    'circleci', 'Store built extension as CircleCI arfitact',
-    function() {
-      if (process.env.CIRCLE_ARTIFACTS) { grunt.task.run('copy:artifact'); }
-      else { grunt.log.ok('Not on CircleCI, skipped'); }
-    }
-  );
-
   //
   // testing-related tasks
   //
 
-  grunt.registerTask('test', ['jshint', 'mochaTest']);
+  grunt.registerTask('test', ['jshint']);
   grunt.registerTask('test-cont', ['test', 'watch']);
 
   //
@@ -136,6 +124,6 @@ module.exports = function(grunt) {
   //
 
   grunt.registerTask('default', ['clean', 'test', 'mkdir:unpacked', 'copy:main', 'manifest',
-    'mkdir:js', 'browserify', 'copy:prod', 'uglify', 'exec', 'circleci']);
+    'mkdir:js', 'browserify', 'copy:prod', 'uglify', 'exec']);
 
 };
