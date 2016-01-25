@@ -5,18 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>pass-extension-chrome</title>
     <link rel="stylesheet" type="text/css" href="../css/options.css">
-    <!-- <link rel="stylesheet" type="text/css" href="../css/libs/progressjs.min.css"> -->
   </head>
   <body>
-    <p>Set a passphrase and press Generate key.
+    <p>Set a passphrase and press Generate key.</p>
     <div id="key-container">
-      <label for="key">PGP key:</label>
+      <label for="public-key">PGP key:</label>
       <textarea id="public-key" name="public-key" readonly></textarea>
-      <input type="hidden" id="private-key" name="private-key"></textarea>
+      <input type="hidden" id="private-key" name="private-key">
     </div>
 
     <p>
-      <label for="key">Passphrase:</label>
+      <label for="passphrase">Passphrase:</label>
       <input type="password" id="passphrase" name="passphrase" autofocus>
 
       <button id="key-gen">Generate key</button>
