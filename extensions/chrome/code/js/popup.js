@@ -47,7 +47,7 @@
         var passphrase = $('#passphrase').val();
 
         // unlock in background.js
-        msg.bg('unlock', passphrase, function(unlocked) {
+        msg.bg('testPassphrase', passphrase, function(unlocked) {
           if (unlocked === null) {
             // create alert
             var alertElem = $('<div role="alert">').addClass('alert alert-danger')

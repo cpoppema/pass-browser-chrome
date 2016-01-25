@@ -3,9 +3,9 @@
 (function() {
   console.log('OPTIONS SCRIPT WORKS!');
 
-  var openpgp = require('openpgp');
-
   var $ = require('./libs/jquery');
+
+  var msg = require('./modules/msg').init('popup');
 
   /**
    * Save keys to 'chrome.local'.
@@ -48,7 +48,7 @@
       passphrase: $('#passphrase').val()
     };
 
-    openpgp.generateKeyPair(options).then(function(keypair) {
+    msg.bg('generateKeys', options, function(keypair) {
       $('#private-key').val(keypair.privateKeyArmored);
       $('#public-key').val(keypair.publicKeyArmored);
       $('#passphrase').val('');

@@ -78,19 +78,27 @@
   }
 
   var handlers = {
-    unlock: function(passphrase, done) {
-      __passphrase = passphrase;
+    copyUsername: function(username, done) {
+      copyToClipboard(username);
 
-      // retrieve private key to test passphrase
-      chrome.storage.local.get('privateKey', function(items) {
-        var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-        if (typeof privateKey === typeof void 0) {
-          done(null);
-        } else {
-          var unlocked = privateKey.decrypt(passphrase);
-          done(unlocked);
+      done();
+    },
+
+    copyPassword: function(path, username, done) {
+      __getPassword(path, username, function(result) {
+        if (!result.error) {
+          // copy
+          copyToClipboard(result.password);
+
+          // clear
+          result.password = null;
         }
+        done(result);
       });
+    },
+
+    generateKeys: function(options, done) {
+      openpgp.generateKeyPair(options).then(done);
     },
 
     getSecrets: function(done) {
@@ -129,29 +137,6 @@
       });
     },
 
-    copyUsername: function(username, done) {
-      copyToClipboard(username);
-
-      done();
-    },
-
-    copyPassword: function(path, username, done) {
-      __getPassword(path, username, function(result) {
-        if (!result.error) {
-          // copy
-          copyToClipboard(result.password);
-
-          // clear
-          result.password = null;
-        }
-        done(result);
-      });
-    },
-
-    showPassword: function(path, username, done) {
-      __getPassword(path, username, done);
-    },
-
     notify: function(notificationId, options) {
       console.log(options);
       chrome.notifications.create(notificationId, options);
@@ -161,6 +146,25 @@
       if (context === 'popup') {
         __passphrase = null;
       }
+    },
+
+    showPassword: function(path, username, done) {
+      __getPassword(path, username, done);
+    },
+
+    testPassphrase: function(passphrase, done) {
+      __passphrase = passphrase;
+
+      // retrieve private key to test passphrase
+      chrome.storage.local.get('privateKey', function(items) {
+        var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+        if (typeof privateKey === typeof void 0) {
+          done(null);
+        } else {
+          var unlocked = privateKey.decrypt(passphrase);
+          done(unlocked);
+        }
+      });
     }
   };
 
