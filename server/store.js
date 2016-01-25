@@ -105,7 +105,12 @@ module.exports = (function() {
         // skip everything without a domain
         if (domain) {
           // add file to secrets
-          secrets.push({domain: domain, username: username, path: relPath});
+          secrets.push({
+            domain: domain,
+            path: relPath,
+            username: username,
+            username_normalized: unorm.nfkd(username)
+          });
         }
 
         next();

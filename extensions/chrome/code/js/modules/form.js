@@ -8,7 +8,6 @@
 
 var $ = require('../libs/jquery');
 var msg = require('../modules/msg').init('form');
-var unorm = require('unorm');
 
 module.exports.init = function(callback) {
 
@@ -170,7 +169,7 @@ module.exports.init = function(callback) {
                       template
                         .attr('data-domain', secret.domain)
                         .attr('data-path', secret.path)
-                        .attr('data-searchable-username', unorm.nfkd(secret.username))
+                        .attr('data-username-normalized', secret.username_normalized)
                         .attr('data-username', secret.username)
                         // do not display initially
                         .css('display', 'none');  // .hide() won't work yet
