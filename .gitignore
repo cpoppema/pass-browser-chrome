@@ -1,8 +1,6 @@
+build/
+node_modules
+.swp
 .DS_Store
-**/node_modules
-**/npm-debug.log
-extensions/chrome/build/*.crx
-extensions/chrome/build/unpacked-dev
-extensions/chrome/build/unpacked-prod
-extensions/chrome/*.swp
-extensions/chrome/mykey.pem
+npm-debug.log
+mykey.pem

@@ -256,7 +256,7 @@
       // filter list
       $('.secret').each(function(i, secretElem) {
         if (fuzzyContains($(secretElem).attr('data-domain'), query) ||
-            fuzzyContains($(secretElem).attr('data-searchable-username'), query)) {
+            fuzzyContains($(secretElem).attr('data-username-normalized'), query)) {
           $(secretElem).show();
         } else {
           $(secretElem).hide();
