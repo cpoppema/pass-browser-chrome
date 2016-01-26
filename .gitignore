@@ -6,4 +6,3 @@ extensions/chrome/build/unpacked-dev
 extensions/chrome/build/unpacked-prod
 extensions/chrome/*.swp
 extensions/chrome/mykey.pem
-server/log
