@@ -8,6 +8,75 @@
 
   var msg = require('./modules/msg').init('popup');
 
+  function fuzzyContains(hay, needle) {
+    hay = hay.toLowerCase();
+
+    var i = 0, n = -1, l;
+    needle = needle.toLowerCase();
+    for (; l = needle[i++] ;) {
+      if (!~(n = hay.indexOf(l, n + 1))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function filterSecrets(query) {
+    // filter list
+    $('.secret').each(function(i, secretElem) {
+      if (fuzzyContains($(secretElem).attr('data-domain'), query) ||
+          fuzzyContains($(secretElem).attr('data-username-normalized'), query)) {
+        $(secretElem).show();
+      } else {
+        $(secretElem).hide();
+      }
+    });
+  }
+
+  function fillTopSecrets(done) {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      var parseDomain = require('parse-domain');
+      var parts = parseDomain(tabs[0].url);
+      if (parts === null) {
+        // invalid domain (extension pages, settings etc.)
+        done();
+        return;
+      }
+      var currentSubdomain = [parts.subdomain, parts.domain, parts.tld].join('.');
+      var currentDomain = [parts.domain, parts.tld].join('.');
+
+      // find matches
+      var subdomainMatches = [];
+      var domainMatches = [];
+      $('#all-secrets .secret').each(function(i, secretElem) {
+        var secretDomain = $(secretElem).attr('data-domain');
+
+        // move matches to #top-list
+        if (secretDomain.indexOf(currentSubdomain) === 0) {
+          subdomainMatches.push($(secretElem).clone());
+          $(secretElem).remove();
+        }
+        if (secretDomain.indexOf(currentDomain) === 0) {
+          domainMatches.push($(secretElem).clone());
+          $(secretElem).remove();
+        }
+      });
+
+      // add matches in order to #top-secrets
+      if (subdomainMatches.length + domainMatches.length) {
+        $('#top-secrets').show();
+        $.each(subdomainMatches, function(i, secretElem) {
+          $(secretElem).appendTo($('#top-secrets'));
+        });
+        $.each(domainMatches, function(i, secretElem) {
+          $(secretElem).appendTo($('#top-secrets'));
+        });
+      }
+
+      done();
+    });
+  }
+
   $(function() {
     $('#go-to-options').on('click', function() {
       chrome.runtime.openOptionsPage();
@@ -239,31 +308,6 @@
       });
     }
 
-    function fuzzyContains(hay, needle) {
-      hay = hay.toLowerCase();
-
-      var i = 0, n = -1, l;
-      needle = needle.toLowerCase();
-      for (; l = needle[i++] ;) {
-        if (!~(n = hay.indexOf(l, n + 1))) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    function filterSecrets(query) {
-      // filter list
-      $('.secret').each(function(i, secretElem) {
-        if (fuzzyContains($(secretElem).attr('data-domain'), query) ||
-            fuzzyContains($(secretElem).attr('data-username-normalized'), query)) {
-          $(secretElem).show();
-        } else {
-          $(secretElem).hide();
-        }
-      });
-    }
-
     $('.container').on('input', '#search', function(event) {
       var query = $(event.target).val().trim();
       chrome.storage.local.set({lastQuery: query}, function() {
@@ -274,50 +318,6 @@
         }
       });
     });
-
-    function fillTopSecrets(done) {
-      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        var parseDomain = require('parse-domain');
-        var parts = parseDomain(tabs[0].url);
-        if (parts === null) {
-          // invalid domain (extension pages, settings etc.)
-          done();
-          return;
-        }
-        var currentSubdomain = [parts.subdomain, parts.domain, parts.tld].join('.');
-        var currentDomain = [parts.domain, parts.tld].join('.');
-
-        // find matches
-        var subdomainMatches = [];
-        var domainMatches = [];
-        $('#all-secrets .secret').each(function(i, secretElem) {
-          var secretDomain = $(secretElem).attr('data-domain');
-
-          // move matches to #top-list
-          if (secretDomain.indexOf(currentSubdomain) === 0) {
-            subdomainMatches.push($(secretElem).clone());
-            $(secretElem).remove();
-          }
-          if (secretDomain.indexOf(currentDomain) === 0) {
-            domainMatches.push($(secretElem).clone());
-            $(secretElem).remove();
-          }
-        });
-
-        // add matches in order to #top-secrets
-        if (subdomainMatches.length + domainMatches.length) {
-          $('#top-secrets').show();
-          $.each(subdomainMatches, function(i, secretElem) {
-            $(secretElem).appendTo($('#top-secrets'));
-          });
-          $.each(domainMatches, function(i, secretElem) {
-            $(secretElem).appendTo($('#top-secrets'));
-          });
-        }
-
-        done();
-      });
-    }
 
     // always show unlock form
     showUnlock();
