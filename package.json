@@ -1,8 +1,12 @@
 {
-  "name": "pass-private-server",
+  "name": "pass-browser-chrome",
   "license": "GNU GPL v3.0",
+  "description": "Make secrets accessible from a person's ~/.password-store",
+  "author": "Cornelis Poppema",
   "version": "0.0.1",
-  "description": "Read secrets from a nodejs server exposing a person's ~/.password-store",
+  "engines": {
+    "node": ">= 4.2.6"
+  },
   "dependencies": {
     "bootstrap": "^4.0.0-alpha.2",
     "openpgp": "~1.4.1",
@@ -19,9 +23,6 @@
     "grunt-contrib-watch": "^0.6.1",
     "grunt-exec": "^0.4.6",
     "grunt-mkdir": "^0.1.2"
-  },
-  "engines": {
-    "node": ">= 4.2.6"
   },
   "export-symbol": "extensionSkeleton.exports"
 }
