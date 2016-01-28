@@ -93,6 +93,8 @@
     }
 
     function showSecrets() {
+      msg.bg('setUnlockIcon');
+
       hideUnlock();
 
       $('#secrets').show();
@@ -104,6 +106,8 @@
     }
 
     function showUnlock() {
+      msg.bg('setLockIcon');
+
       hideSecrets();
 
       $('#unlock-form').on('submit', function resetUnlockButton() {
@@ -151,7 +155,7 @@
                     type: 'basic',
                     title: 'Server Error',
                     message: data.response.error,
-                    iconUrl: chrome.runtime.getURL('images/icon128x128.png'),
+                    iconUrl: chrome.runtime.getURL('images/icon-locked-128.png'),
                     priority: 1
                   });
                 }

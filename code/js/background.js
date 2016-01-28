@@ -168,11 +168,24 @@
     onDisconnect: function(context, tabId) {
       if (context === 'popup') {
         __passphrase = null;
+        this.setLockIcon();
       }
     },
 
     showPassword: function(path, username, done) {
       __getPassword(path, username, done);
+    },
+
+    setLockIcon: function() {
+      chrome.browserAction.setIcon({
+        path: chrome.runtime.getURL('images/icon-locked-128.png')
+      });
+    },
+
+    setUnlockIcon: function() {
+      chrome.browserAction.setIcon({
+        path: chrome.runtime.getURL('images/icon-unlocked-128.png')
+      });
     },
 
     testPassphrase: function(passphrase, done) {
