@@ -42,6 +42,13 @@
             var pgpMessage = openpgp.message.readArmored(responseText);
             openpgp.decryptMessage(privateKey, pgpMessage).then(function(plaintext) {
               // success!
+
+              // read only the first line as the password
+              var eol = plaintext.indexOf('\n');
+              if (eol !== -1) {
+                plaintext = plaintext.slice(0, eol);
+              }
+
               done({
                 error: null,
                 password: plaintext
