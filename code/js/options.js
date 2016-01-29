@@ -1,55 +1,63 @@
 'use strict';
 
-(function() {
-  console.log('OPTIONS SCRIPT WORKS!');
-
+(function options() {
   var $ = require('./libs/jquery');
 
   var msg = require('./modules/msg').init('popup');
 
-  var keyPair = {
-    publicKey: null,
-    privateKey: null
-  };
+  var form,
+    keyPair = {
+      publicKey: null,
+      privateKey: null
+    };
 
-  $(function() {
-    // show data on load
-    chrome.storage.local.get(['publicKey', 'server'], function(items) {
-      if (items.publicKey) {
-        $('#public-key').val(items.publicKey);
+  function disableSaveButton() {
+    $('#save')
+      .removeClass('btn-success')
+      .prop('disabled', true);
+  }
 
-        // get key id
-        msg.bg('getIdForKey', items.publicKey, function(keyId) {
-          $('#public-key-id').val(keyId);
-        });
-        // get user id
-        msg.bg('getUserIdForKey', items.publicKey, function(userId) {
-          $('#key-name').val(userId);
-        });
-      }
-      if (items.server) {
-        $('#server').val(items.server);
-      }
+  function enableSaveButton() {
+    $('#save')
+      .addClass('btn-success')
+      .prop('disabled', false);
+  }
+
+  function enableSaveOnFormChange() {
+    // enable save button when one of these fields change, other field changes
+    // require a new keypair
+    var fieldNames = [
+      'server'
+    ];
+    $.each(fieldNames, function bindInputChange(i, fieldName) {
+      // get field element
+      var field = $(form).find('[name="' + fieldName + '"]');
+
+      // bind event
+      $(field).off('input');
+      var originalValue = $(field).val();
+      $(field).on('input', function toggleSaveOnChange() {
+        var fieldHasChanged = $(field).val() !== originalValue;
+        var isRequired = $(field).is('[required]');
+
+        if (fieldHasChanged && !isRequired ||
+            fieldHasChanged && isRequired && $(field).val().trim() !== ''
+        ) {
+          enableSaveButton();
+        } else {
+          // don't prevent a new key from being saved
+          if (!$(form).data('contains-new-key')) {
+            disableSaveButton();
+          }
+        }
+      });
     });
+  }
 
-    $('#key-gen').click(function(event) {
-      // don't go anywhere
-      event.preventDefault();
-
-      // reset in-memory form values
-      keyPair = {
-        publicKey: null,
-        privateKey: null
-      };
-
-      // clear visible key, disable save
-      $('#public-key, #public-key-id').val('');
-      $('#save')
-        .removeClass('btn-success')
-        .prop('disabled', true);
-
-      // show warnings for required input
-      $.each($(event.target).closest('form').find(':input[required]'), function(i, inputElem) {
+  function formIsValid() {
+    // show warnings for required input
+    $.each($(form).find(':input[required]'),
+      function checkRequiredInputs(i, inputElem) {
         if (!$(inputElem).val().trim().length) {
           $(inputElem)
             .addClass('form-control-warning')
@@ -63,13 +71,26 @@
         }
       });
 
-      // stop if a form input still has an error
-      if ($(event.target).closest('form').find('.has-warning').length) {
-        $(event.target).closest('form').find('.has-warning:first :input').focus();
-        return;
-      }
+    // return true if there is still an error with the form input
+    return !$(form).find('.has-warning').length;
+  }
 
-      // show indication of progress
+  function generateKeyPair() {
+    // reset in-memory form values
+    keyPair = {
+      publicKey: null,
+      privateKey: null
+    };
+
+    // clear visible key, disable save
+    $('#public-key, #public-key-id').val('');
+    disableSaveButton();
+
+    if (!formIsValid()) {
+      $(form).find('.has-warning:first :input').focus();
+    } else {
+      // show indications of progress
+      $('#key-gen').prop('disabled', true);
       $('#public-key').val('Generating..');
 
       // generate keys and display data in form
@@ -78,7 +99,7 @@
         userId: $('#key-name').val(),
         passphrase: $('#passphrase').val()
       };
-      msg.bg('generateKeys', options, function(keypair) {
+      msg.bg('generateKeys', options, function generateKeysCallback(keypair) {
         keyPair.publicKey = keypair.publicKeyArmored;
         keyPair.privateKey = keypair.privateKeyArmored;
 
@@ -86,35 +107,89 @@
 
         $('#passphrase').val('');
         $('#key-gen').prop('disabled', false);
-        $('#save')
-          .addClass('btn-success')
-          .prop('disabled', false);
+
+        $(form).data('contains-new-key', true);
+        enableSaveButton();
 
         // get key id
-        msg.bg('getIdForKey', keyPair.publicKey, function(keyId) {
-          $('#public-key-id').val(keyId);
-        });
+        msg.bg('getIdForKey', keyPair.publicKey,
+          function getIdForKeyCallback(keyId) {
+            $('#public-key-id').val(keyId);
+          });
       });
+    }
+  }
+
+  function preloadOptionsForm() {
+    chrome.storage.local.get(['publicKey', 'server'],
+      function getCurrentOptionsCallback(items) {
+        // get server address
+        if (items.server) {
+          $('#server').val(items.server);
+        }
+
+        if (items.publicKey) {
+          $('#public-key').val(items.publicKey);
+
+          // get key id
+          msg.bg('getIdForKey', items.publicKey,
+            function getIdForKeyCallback(keyId) {
+              $('#public-key-id').val(keyId);
+            });
+
+          // get key name
+          msg.bg('getUserIdForKey', items.publicKey,
+            function getUserIdForKeyCallback(userId) {
+              $('#key-name').val(userId);
+            });
+
+          // enable save when form has changed
+          enableSaveOnFormChange();
+        } else {
+          $(form).find(':input:first').focus();
+        }
+      });
+  }
+
+  function saveOptions(event) {
+    var options = {
+      server: $('#server').val().trim(),
+    };
+    if (keyPair.publicKey) {
+      options.publicKey = keyPair.publicKey;
+    }
+    if (keyPair.privateKey) {
+      options.privateKey = keyPair.privateKey;
+    }
+
+    chrome.storage.local.set(options, function saveOptionsCallback() {
+      $('#status').text('Options saved.');
+      setTimeout(function hideStatus() {
+        $('#status').text('');
+      }, 750);
     });
 
-    $('#save').click(function(event) {
-      chrome.storage.local.get('publicKey', function(items) {
-        chrome.storage.local.set({
-          publicKey: keyPair.publicKey,
-          privateKey: keyPair.privateKey,
-          server: $('#server').val().trim()
-        }, function() {
-          // update status to let user know options were saved
-          if (items.publicKey) {
-            $('#status').text('Key overwritten.');
-          } else {
-            $('#status').text('Key saved.');
-          }
-          setTimeout(function() {
-            $('#status').text('');
-          }, 750);
-        });
-      });
+    enableSaveOnFormChange();
+    disableSaveButton();
+  }
+
+  $(function onDomReady() {
+    form = $('#options-form');
+    $(form).on('submit', function onSubmit(event) {
+      // don't go anywhere
+      event.preventDefault();
     });
+
+    // some value changes disable/enable the save button, prevent disabling
+    // the save button whenever a value resets to its original value, after
+    // a new key has been generated
+    $(form).data('contains-new-key', false);
+
+    // show current options
+    preloadOptionsForm();
+
+    // bind click events
+    $('#key-gen').on('click', generateKeyPair);
+    $('#save').on('click', saveOptions);
   });
 })();

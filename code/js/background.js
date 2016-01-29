@@ -1,8 +1,6 @@
 'use strict';
 
 (function() {
-  console.log('BACKGROUND SCRIPT WORKS!');
-
   var openpgp = require('openpgp');
 
   // remember the passphrase to get secrets while in the popup, this is cleared
@@ -27,7 +25,7 @@
    */
   function __getPassword(path, username, done) {
     chrome.storage.local.get('server', function(items) {
-      var server = items.server || 'http://localhost:8080';
+      var server = items.server;
       var secretsUri = server + '/secret/';
 
       function handler() {

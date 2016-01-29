@@ -10,11 +10,11 @@
   <body>
     <div class="container">
       <div class="row">
-        <form>
+        <form id="options-form">
           <fieldset class="form-group">
             <label for="key-name">Key name *</label>
             <small class="text-muted">Name of this key to identify it with.</small>
-            <input type="text" id="key-name" class="form-control" name="key-name" placeholder="pass-extension-chrome" autofocus required>
+            <input type="text" id="key-name" class="form-control" name="key-name" placeholder="pass-extension-chrome" required>
           </fieldset>
           <fieldset class="form-group">
             <label for="passphrase">Passphrase *</label>
@@ -22,9 +22,9 @@
              <input type="password" id="passphrase" class="form-control" name="passphrase" required>
           </fieldset>
           <fieldset class="form-group">
-            <label for="server">Remote server</label>
-            <small class="text-muted">Server address</small>
-            <input type="text" id="server" class="form-control" name="server" placeholder="http://localhost:8080">
+            <label for="server">Remote server *</label>
+            <small class="text-muted">Server address.</small>
+            <input type="text" id="server" class="form-control" name="server" required>
           </fieldset>
           <fieldset class="form-group">
             <label for="passphrase">Public key</label>
@@ -39,7 +39,7 @@
               </div>
             </div>
           </fieldset>
-          <button type="submit" id="key-gen" class="btn btn-primary">Generate key</button>
+          <button type="button" id="key-gen" class="btn btn-primary">Generate key</button>
           <button type="button" id="save" class="btn btn-secondary" disabled>Save</button>
           <span id="status"></span>
         </form>
