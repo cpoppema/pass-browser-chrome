@@ -1,8 +1,6 @@
 'use strict';
 
 (function() {
-  console.log('POPUP SCRIPT WORKS!');
-
   var $ = require('./libs/jquery');
   var progressJs = require('./libs/progress').progressJs;
 
@@ -280,10 +278,13 @@
                                   $('#search').focus();
                                   $('#search').select();
                                   filterSecrets(lastQuery);
+                                } else {
+                                  $('#search').focus();
                                 }
                               });
                             } else {
                               filterSecrets(currentQuery);
+                              $('#search').focus();
                             }
                           }
                         }, i * animationDelay);
