@@ -113,4 +113,5 @@ globals:
   escape                               : false
   unescape                             : false
   chrome                               : true
+  module                               : true
   require                              : true

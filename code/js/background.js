@@ -1,7 +1,9 @@
 'use strict';
 
-(function() {
+(function background() {
   var openpgp = require('openpgp');
+
+  var server = require('./server');
 
   // remember the passphrase to get secrets while in the popup, this is cleared
   // when the popup hides
@@ -23,74 +25,56 @@
   /**
    * Retrieve password from server.
    */
-  function __getPassword(path, username, done) {
-    chrome.storage.local.get('server', function(items) {
-      var server = items.server;
-      var secretsUri = server + '/secret/';
+  function getPassword(path, username, done) {
+    function getPasswordCallback(data) {
+      var error = data.error;
+      var response = data.response;
 
-      function handler() {
-        if (this.status === 200 &&
-          this.responseText !== null) {
-          var responseText = this.responseText;
+      if (error) {
+        done({error: error, response: response});
+      } else {
+        chrome.storage.local.get('privateKey',
+          function getPrivateKeyCallback(items) {
+            var privateKey = openpgp.key.readArmored(items.privateKey);
+            privateKey.keys[0].decrypt(__passphrase);
 
-          chrome.storage.local.get('privateKey', function(items) {
-            var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-            privateKey.decrypt(__passphrase);
+            var pgpMessage = openpgp.message.readArmored(data.response);
+            openpgp
+              .decryptMessage(privateKey.keys[0], pgpMessage)
+              .then(function onSuccess(plaintext) {
+                // success!
 
-            var pgpMessage = openpgp.message.readArmored(responseText);
-            openpgp.decryptMessage(privateKey, pgpMessage).then(function(plaintext) {
-              // success!
+                // read only the first line as the password
+                var eol = plaintext.indexOf('\n');
+                if (eol !== -1) {
+                  plaintext = plaintext.slice(0, eol);
+                }
 
-              // read only the first line as the password
-              var eol = plaintext.indexOf('\n');
-              if (eol !== -1) {
-                plaintext = plaintext.slice(0, eol);
-              }
-
-              done({
-                error: null,
-                password: plaintext
+                done({password: plaintext});
+              })
+              .catch(function onError(error) {
+                // something went wrong
+                done({
+                  error: 1,
+                  response: 'Unknown error'
+                });
               });
-            }).catch(function(error) {
-              // something went wrong
-              done({
-                error: 1,
-                response: 'Unknown error'
-              });
-            });
           });
-        } else {
-          // something went wrong
-          done({
-            error: this.status,
-            response: JSON.parse(this.responseText)
-          });
-        }
       }
+    }
 
-      chrome.storage.local.get('publicKey', function(items) {
-        // provide public key id as authentication
-        var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
-        var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
-
-        var client = new XMLHttpRequest();
-        client.onload = handler;
-        client.open('POST', secretsUri);
-        client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-        client.send(JSON.stringify({keyId: keyId, path: path, username: username}));
-      });
-    });
+    server.getPassword(path, username, getPasswordCallback);
   }
 
   var handlers = {
-    copyUsername: function(username, done) {
+    copyUsername: function copyUsername(username, done) {
       copyToClipboard(username);
 
       done();
     },
 
-    copyPassword: function(path, username, done) {
-      __getPassword(path, username, function(result) {
+    copyPassword: function copyPassword(path, username, done) {
+      getPassword(path, username, function getPasswordCallback(result) {
         if (!result.error) {
           // copy
           copyToClipboard(result.password);
@@ -102,95 +86,71 @@
       });
     },
 
-    generateKeys: function(options, done) {
+    generateKeys: function generateKeys(options, done) {
       openpgp.generateKeyPair(options).then(done);
     },
 
-    getIdForKey: function(key, done) {
+    getIdForKey: function getIdForKey(key, done) {
       var publicKey = openpgp.key.readArmored(key).keys[0];
       var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
       done(keyId);
     },
 
-    getUserIdForKey: function(key, done) {
+    getSecrets: function getSecrets(done) {
+      function getSecretsCallback(data) {
+        var error = data.error;
+        var response = data.response;
+
+        if (error) {
+          done({error: error, response: response});
+        } else {
+          done({secrets: response});
+        }
+      }
+
+      server.getSecrets(getSecretsCallback);
+    },
+
+    getUserIdForKey: function getUserIdForKey(key, done) {
       var publicKey = openpgp.key.readArmored(key).keys[0];
       var userId = publicKey.users[0].userId.userid;
       done(userId);
     },
 
-    getSecrets: function(done) {
-      chrome.storage.local.get('server', function(items) {
-        var server = items.server || 'http://localhost:8080';
-        var secretsUri = server + '/secrets/';
-
-        function handler() {
-          if (this.status === 200 &&
-            this.responseText !== null) {
-            // success!
-            done({
-              error: null,
-              secrets: JSON.parse(this.responseText)
-            });
-          } else {
-            // something went wrong
-            done({
-              error: this.status,
-              response: JSON.parse(this.responseText)
-            });
-          }
-        }
-
-        chrome.storage.local.get('publicKey', function(items) {
-          if (items.publicKey) {
-            // provide public key id as authentication
-            var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
-            var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
-
-            var client = new XMLHttpRequest();
-            client.onload = handler;
-            client.open('POST', secretsUri);
-            client.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-            client.send(JSON.stringify({keyId: keyId}));
-          } else {
-            // error
-          }
-        });
-      });
-    },
-
-    notify: function(notificationId, options) {
-      console.log(options);
+    notify: function notify(notificationId, options) {
       chrome.notifications.create(notificationId, options);
     },
 
-    onDisconnect: function(context, tabId) {
+    onDisconnect: function onDisconnect(context, tabId) {
+      // forget the passphrase and change the icon when the popup is hidden
       if (context === 'popup') {
         __passphrase = null;
         this.setLockIcon();
       }
     },
 
-    showPassword: function(path, username, done) {
-      __getPassword(path, username, done);
-    },
-
-    setLockIcon: function() {
+    setLockIcon: function setLockIcon() {
       chrome.browserAction.setIcon({
         path: chrome.runtime.getURL('images/icon-locked-128.png')
       });
     },
 
-    setUnlockIcon: function() {
+    setUnlockIcon: function setUnlockIcon() {
       chrome.browserAction.setIcon({
         path: chrome.runtime.getURL('images/icon-unlocked-128.png')
       });
     },
 
-    testPassphrase: function(passphrase, done) {
+    showPassword: function showPassword(path, username, done) {
+      getPassword(path, username, done);
+    },
+
+    testPassphrase: function testPassphrase(passphrase, done) {
+      // remember passhrase while popup is visible
       __passphrase = passphrase;
 
-      // retrieve private key to test passphrase
-      chrome.storage.local.get('privateKey', function(items) {
+      // test passphrase with private key
+      function getPrivateKeyCallback(items) {
         var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
         if (typeof privateKey === typeof void 0) {
           done(null);
@@ -198,7 +158,8 @@
           var unlocked = privateKey.decrypt(passphrase);
           done(unlocked);
         }
-      });
+      }
+      chrome.storage.local.get('privateKey', getPrivateKeyCallback);
     }
   };
 
