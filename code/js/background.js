@@ -1,5 +1,10 @@
 'use strict';
 
+// hide notifications on click
+chrome.notifications.onClicked.addListener(function callback(notificationId) {
+  chrome.notifications.clear(notificationId);
+});
+
 (function background() {
   var openpgp = require('openpgp');
 
@@ -55,8 +60,8 @@
               .catch(function onError(error) {
                 // something went wrong
                 done({
-                  error: 1,
-                  response: 'Unknown error'
+                  error: 400,
+                  response: 'Unknown error when decrypting received message'
                 });
               });
           });
@@ -97,18 +102,7 @@
     },
 
     getSecrets: function getSecrets(done) {
-      function getSecretsCallback(data) {
-        var error = data.error;
-        var response = data.response;
-
-        if (error) {
-          done({error: error, response: response});
-        } else {
-          done({secrets: response});
-        }
-      }
-
-      server.getSecrets(getSecretsCallback);
+      server.getSecrets(done);
     },
 
     getUserIdForKey: function getUserIdForKey(key, done) {

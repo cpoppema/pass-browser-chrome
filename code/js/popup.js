@@ -228,7 +228,7 @@
       $('#unlock span').text('Unlocked');
 
       setTimeout(function showSecretsDelayed() {
-        showSecrets(data.secrets);
+        showSecrets(data.response);
       }, 200);
     } else {
       // error
@@ -236,6 +236,7 @@
         .removeClass('btn-primary btn-danger btn-success')
         .addClass('btn-warning');
 
+<<<<<<< Updated upstream
       if (data.error < 500) {
         $('#unlock span').text(data.response.error);
       } else {
@@ -247,6 +248,15 @@
           priority: 1
         });
       }
+=======
+      msg.bg('notify', 'pass-private-server-server-error', {
+        type: 'basic',
+        title: '' + data.error + ':' + data.response,
+        message: data.response,
+        iconUrl: chrome.runtime.getURL('images/icon-locked-128.png'),
+        priority: 1
+      });
+>>>>>>> Stashed changes
     }
   }
 

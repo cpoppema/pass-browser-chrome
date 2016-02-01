@@ -14,22 +14,17 @@
       var uri = server + path;
 
       function handler() {
-        var responseText = this.responseText;
-        if (this.getResponseHeader('content-type') === 'application/json') {
-          responseText = JSON.parse(this.responseText);
-        }
-
-        if (this.status === 200 && this.responseText !== null) {
-          // success!
-          done({
-            error: null,
-            response: responseText
-          });
+        if (this.responseText !== null &&
+            this.getResponseHeader('content-type') === 'application/json'
+        ) {
+          // response parsed, it might still contain an error
+          var response = JSON.parse(this.responseText);
+          done(response);
         } else {
-          // something went wrong
+          // unknown error, simply pass status code and status text
           done({
             error: this.status,
-            response: responseText
+            response: this.statusText
           });
         }
       }
