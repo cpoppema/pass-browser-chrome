@@ -32,11 +32,8 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
    */
   function getPassword(path, username, done) {
     function getPasswordCallback(data) {
-      var error = data.error;
-      var response = data.response;
-
-      if (error) {
-        done({error: error, response: response});
+      if (data.error) {
+        done(data);
       } else {
         chrome.storage.local.get('privateKey',
           function getPrivateKeyCallback(items) {
@@ -102,7 +99,14 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     getSecrets: function getSecrets(done) {
-      server.getSecrets(done);
+      function getSecretsCallback(data) {
+        if (data.error) {
+          done(data);
+        } else {
+          done({secrets: data.response});
+        }
+      }
+      server.getSecrets(getSecretsCallback);
     },
 
     getUserIdForKey: function getUserIdForKey(key, done) {

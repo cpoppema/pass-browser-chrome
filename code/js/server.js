@@ -19,7 +19,14 @@
         ) {
           // response parsed, it might still contain an error
           var response = JSON.parse(this.responseText);
-          done(response);
+          if (response.error) {
+            done({
+              error: this.status,
+              response: response.error
+            });
+          } else {
+            done(response);
+          }
         } else {
           // unknown error, simply pass status code and status text
           done({

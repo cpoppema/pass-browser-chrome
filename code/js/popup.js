@@ -44,17 +44,19 @@
       var username = $(secret).data('username');
 
       msg.bg('copyPassword', path, username,
-        function copyPasswordCallback(result) {
-          if (result.error) {
+        function copyPasswordCallback(data) {
+          if (data.error) {
             $(event.target).removeClass('copied label-primary');
             $(event.target).addClass('label-danger');
+
+            showErrorNotification(data.error + ': ' + data.response);
           } else {
             // remove existing 'copied' indicators
             $('.copied').each(function forEachCopiedElem(i, elem) {
               $(elem).text($(elem).data('reset-text'));
               $(elem).removeClass('copied label-primary');
             });
-          // indicate this password has been copied
+            // indicate this password has been copied
             $(event.target).text($(event.target).data('copied-text'));
             $(event.target).removeClass('label-danger');
             $(event.target).addClass('copied label-primary');
@@ -71,13 +73,15 @@
       var username = $(secret).data('username');
 
       msg.bg('showPassword', path, username,
-        function showPasswordCallback(result) {
-          if (result.error) {
+        function showPasswordCallback(data) {
+          if (data.error) {
             $(secret).find('.password').val(hiddenPasswordText);
             $(event.target).removeClass('label-success');
             $(event.target).addClass('label-danger');
+
+            showErrorNotification(data.error + ': ' + data.response);
           } else {
-            $(secret).find('.password').val(result.password);
+            $(secret).find('.password').val(data.password);
             $(event.target).removeClass('label-danger');
             $(event.target).addClass('label-success');
           }
@@ -228,7 +232,7 @@
       $('#unlock span').text('Unlocked');
 
       setTimeout(function showSecretsDelayed() {
-        showSecrets(data.response);
+        showSecrets(data.secrets);
       }, 200);
     } else {
       // error
@@ -236,27 +240,7 @@
         .removeClass('btn-primary btn-danger btn-success')
         .addClass('btn-warning');
 
-<<<<<<< Updated upstream
-      if (data.error < 500) {
-        $('#unlock span').text(data.response.error);
-      } else {
-        msg.bg('notify', 'pass-private-server-server-error', {
-          type: 'basic',
-          title: 'Server Error',
-          message: data.response.error,
-          iconUrl: chrome.runtime.getURL('images/icon-locked-128.png'),
-          priority: 1
-        });
-      }
-=======
-      msg.bg('notify', 'pass-private-server-server-error', {
-        type: 'basic',
-        title: '' + data.error + ':' + data.response,
-        message: data.response,
-        iconUrl: chrome.runtime.getURL('images/icon-locked-128.png'),
-        priority: 1
-      });
->>>>>>> Stashed changes
+      showErrorNotification(data.error + ': ' + data.response);
     }
   }
 
@@ -303,6 +287,20 @@
 
     // show new alert
     $(alertElem).appendTo($('.alerts'));
+  }
+
+  function showErrorNotification(message, title) {
+    if (!title) {
+      title = 'Error';
+    }
+
+    msg.bg('notify', 'pass-browser-error', {
+      iconUrl: chrome.runtime.getURL('images/icon-locked-128.png'),
+      message: message,
+      priority: 0,
+      title: title,
+      type: 'basic'
+    });
   }
 
   function showSecrets(secrets) {
