@@ -40,6 +40,13 @@
       client.onload = handler;
       client.open('POST', uri);
       client.setRequestHeader('Content-Type', 'application/json');
+      client.timeout = 5000;
+      client.ontimeout = function onTimeout() {
+        done({
+          error: 404,
+          response: 'Server did not respond or timed out.'
+        });
+      };
 
       var payload = {keyId: keyId};
       for (var key in data) {
