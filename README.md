@@ -1,6 +1,6 @@
 # pass-browser-chrome
 
-pass-browser-chrome is a browser plugin for chrome/chromium thats brings your secrets managed by `pass` to your browser. Read all about `pass` [here](http://www.passwordstore.org).
+pass-browser-chrome is a browser plugin for chrome/chromium that brings your secrets managed by `pass` to your browser. Read all about `pass` [here](http://www.passwordstore.org).
 
 ## How to use
 
