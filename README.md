@@ -13,6 +13,7 @@ For this setup to work, secrets must be stored in the format `url/username`, for
 ## How to install
 
 Install the browser plugin by either:
+- adding it from the [web store](https://chrome.google.com/webstore/detail/pass-browser-chrome/ncoadlppaciemlepmdmdnecjlfmbidcd) (this shows some screenshots also)
 - downloading pass-browser-chrome-{version}.crx directly from the [releases](../../releases) page
 - building it yourself
     * clone this repository
