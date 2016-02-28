@@ -13,7 +13,7 @@ For this setup to work, secrets must be stored in the format `url/username`, for
 ## How to install
 
 Install the browser plugin by either:
-- downloading pass-browser-chrome-{version}.crx directly from the [releases](releases) page
+- downloading pass-browser-chrome-{version}.crx directly from the [releases](../../releases) page
 - building it yourself
     * clone this repository
     * run `npm install`
