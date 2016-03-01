@@ -15,10 +15,10 @@
     },
     "permissions": [
         "<all_urls>",
+        "activeTab",
         "clipboardWrite",
         "notifications",
-        "storage",
-        "tabs"
+        "storage"
     ],
     "web_accessible_resources": [
         "js/*",
