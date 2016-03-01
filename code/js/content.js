@@ -1,21 +1,246 @@
 'use strict';
 
-(function() {
-  console.log('CONTENT SCRIPT WORKS!');
+/**
+ * Allow console.debug output during development.
+ */
+function debug() {
+  if (!('update_url' in chrome.runtime.getManifest())) {
+    console.debug.apply(console, arguments);
+  }
+}
 
-  // var $ = require('./libs/jquery');
-  // // here we use SHARED message handlers, so all the contexts support the same
-  // // commands. but this is NOT typical messaging system usage, since you usually
-  // // want each context to handle different commands. for this you don't need
-  // // handlers factory as used below. simply create individual `handlers` object
-  // // for each context and pass it to msg.init() call. in case you don't need the
-  // // context to support any commands, but want the context to cooperate with the
-  // // rest of the extension via messaging system (you want to know when new
-  // // instance of given context is created / destroyed, or you want to be able to
-  // // issue command requests from this context), you may simply omit the
-  // // `handlers` parameter for good when invoking msg.init()
-  // var handlers = require('./modules/handlers').create('ct');
-  // require('./modules/msg').init('ct', handlers);
+(function content() {
+  var $ = require('./libs/jquery');
 
-  // console.log('jQuery version:', $().jquery);
+  var formSelector = 'form';
+  var usernameFieldSelector = ['[type="email"]:visible',
+                               '[type="text"]:visible',
+                               'input:not([type]):visible',
+                               '[type="textbox"]',
+                              ].join(',');
+  var passwordFieldSelector = '[type="password"]';
+
+
+  /**
+   * Helper function to rate a form.
+   */
+  function scoreForm(form) {
+    if ($(document.activeElement).is('input')) {
+      if (form === $(document.activeElement).closest('form').get(0)) {
+        return 5;
+      }
+    }
+
+    var potentialUsernameFields = $(form)
+      .find(usernameFieldSelector);
+    var potentialPasswordFields = $(form)
+      .find(passwordFieldSelector);
+
+    // 0 points if the form has no text or password inputs
+    if (potentialUsernameFields.length === 0 &&
+        potentialPasswordFields.length === 0
+    ) {
+      return 0;
+    }
+
+    // 4 points for a form with just one text and one password input
+    if (potentialUsernameFields.length === 1 &&
+        potentialPasswordFields.length === 1
+    ) {
+      return 4;
+    }
+
+    // 3 points for a form with just one password input
+    if (potentialUsernameFields.length === 0 &&
+        potentialPasswordFields.length === 1
+    ) {
+      return 3;
+    }
+
+    // 2 points for a form with just one text
+    if (potentialUsernameFields.length === 1 &&
+        potentialPasswordFields.length === 0
+    ) {
+      return 2;
+    }
+
+    // 1 point for a form with more than one text input and one password input
+    if (potentialUsernameFields.length > 1 &&
+        potentialPasswordFields.length === 1
+    ) {
+      return 1;
+    }
+
+    // probably multiple password fields, form fill can still looking at
+    // document.activeElement
+    return 0;
+  }
+
+  /**
+   * Helper function to find a form.
+   */
+  function findForm() {
+    var highscore = 0;
+    var highscoreForm = null;
+    var potentialForm;
+    var potentialForms = $(formSelector);
+
+    if (!potentialForms.length) {
+      // no (visible) forms in page
+      debug('no form detected with selector "' + formSelector + '"');
+      return null;
+    }
+
+    // in case the page has autofocus, or the user selected an input already,
+    // use this as an indicator to find the nearest form element
+    if ($(document.activeElement).is('input')) {
+      potentialForm = $(document.activeElement).closest('form');
+      if (potentialForm.length) {
+        debug('use the form closest to', document.activeElement, potentialForm);
+        highscoreForm = potentialForm.get(0);
+        highscore = scoreForm(highscoreForm);
+      } else {
+        debug('no form close to element:', document.activeElement);
+      }
+    }
+
+    if (highscoreForm === null) {
+      // find highest scoring form
+      $.each(potentialForms, function scorePotentialForm(i, potentialForm) {
+        var score = scoreForm(potentialForm);
+        debug('scored', score, 'with',
+              $(potentialForm).find(usernameFieldSelector).length,
+              'potential username field(s) and',
+              $(potentialForm).find(passwordFieldSelector).length,
+              'potential password field(s):',
+              potentialForm);
+        if (score > highscore) {
+          if (highscoreForm !== null) {
+            debug('replacing highscoreForm by a score of', score,
+                  'with:', potentialForm);
+          }
+
+          highscore = score;
+          highscoreForm = potentialForm;
+
+          if (score === 4) {
+            // break the .each-loop
+            return false;
+          }
+        }
+      });
+    }
+
+    if (highscore === 5) {
+      debug('best form is picked through document.activeElement');
+    }
+    if (highscore === 4) {
+      debug('best form has one username and one password field');
+    }
+    if (highscore === 3) {
+      debug('best form has just a password field');
+    }
+    if (highscore === 2) {
+      debug('best form has just a username field');
+    }
+    if (highscore === 1) {
+      debug('best form has one password field, ' +
+                    'but multiple text fields');
+    }
+    if (highscore === 0) {
+      debug('no form was any good');
+    }
+
+    if (highscore <= 1) {
+      highscoreForm = null;
+    }
+
+    debug('decided on using form:', highscoreForm);
+
+    return highscoreForm;
+  }
+
+  /**
+   * Helper function to find a *visible* username field.
+   */
+  function findUsernameField(container) {
+    var usernameField;
+
+    // in case the page has autofocus, or the user selected an input already,
+    // use this element if it matches usernameFieldSelector
+    if ($(document.activeElement).is(usernameFieldSelector)) {
+      usernameField = document.activeElement;
+      return usernameField;
+    }
+
+    // no selected element: fallback to finding a username field ourselves
+    usernameField = $(container).find(usernameFieldSelector);
+    if ($(usernameField).length === 1) {
+      return usernameField.get(0);
+    }
+  }
+
+  /**
+   * Helper function to find a password field.
+   */
+  function findPasswordField(container) {
+    var passwordField;
+
+    // in case the page has autofocus, or the user selected an input already,
+    // use this element if it matches passwordFieldSelector
+    if ($(document.activeElement).is(passwordFieldSelector)) {
+      return document.activeElement;
+    }
+
+    // no selected element: fallback to finding a password field ourselves
+    passwordField = $(container).find(passwordFieldSelector);
+    if ($(passwordField).length === 1) {
+      return passwordField.get(0);
+    } else if ($(passwordField).length > 1) {
+      // multiple fields found, maybe there is only one visible
+      if ($(passwordField).filter(':visible').length === 1) {
+        return passwordField.filter(':visible').get(0);
+      }
+    }
+  }
+
+  /**
+   * Helper function to trigger events that the site might listen to, this can
+   * help removing custom placeholders for example.
+   */
+  function triggerChange(elem) {
+    var eventNames = ['change', 'input', 'keydown', 'keyup'];
+    $.each(eventNames, function dispatchEvent(i, eventName) {
+      elem.dispatchEvent(new Event(eventName));
+    });
+  }
+
+  var handlers = {
+    fillForm: function fillForm(username, password) {
+      var container = findForm();
+      if (container === null) {
+        container = document.body;
+      }
+
+      var usernameField = findUsernameField(container);
+      var passwordField = findPasswordField(container);
+
+      if (usernameField) {
+        $(usernameField).val(username);
+        triggerChange($(usernameField).get(0));
+      } else {
+        debug('no field found for username in container:', container);
+      }
+
+      // passwordField is allowed to be invisible if there is a usernameField
+      if ($(passwordField).is(':visible') || passwordField && usernameField) {
+        $(passwordField).val(password);
+        triggerChange($(passwordField).get(0));
+      } else {
+        debug('no field found for password in container:', container);
+      }
+    },
+  };
+
+  require('./modules/msg').init('ct', handlers);
 })();

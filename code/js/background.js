@@ -14,6 +14,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   // when the popup hides
   var __passphrase = null;
 
+
   /**
    * Helper function to copy text to clipboard.
    */
@@ -84,6 +85,12 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
           // clear
           result.password = null;
         }
+        done(result);
+      });
+    },
+
+    fillForm: function fillForm(path, username, done) {
+      getPassword(path, username, function getPasswordCallback(result) {
         done(result);
       });
     },
