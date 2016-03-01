@@ -13,17 +13,6 @@
             "js/background.js"
         ]
     },
-    "content_scripts": [
-        {
-            "matches": [
-                "http://*/*",
-                "https://*/*"
-            ],
-            "js": [
-                "js/content.js"
-            ]
-        }
-    ],
     "permissions": [
         "<all_urls>",
         "clipboardWrite",
