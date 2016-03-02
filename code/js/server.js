@@ -1,14 +1,10 @@
 'use strict';
 
 (function server() {
-  var openpgp = require('openpgp');
-
-
   function doPostRequest(path, data, done) {
     function getItemsCallback(items) {
-      // provide public key id as authentication
-      var publicKey = openpgp.key.readArmored(items.publicKey).keys[0];
-      var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+      // provide public key as authentication
+      var publicKey = items.publicKey;
 
       var server = items.server;
       var uri = server + path;
@@ -51,7 +47,7 @@
       client.ontimeout = noServerError;
       client.onerror = noServerError;
 
-      var payload = {keyId: keyId};
+      var payload = {publicKey: publicKey};
       for (var key in data) {
         if (data.hasOwnProperty(key)) {
           payload[key] = data[key];

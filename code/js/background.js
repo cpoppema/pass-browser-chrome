@@ -58,7 +58,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
                 // something went wrong
                 done({
                   error: 400,
-                  response: 'Unknown error when decrypting received message'
+                  response: 'Unknown error when decrypting received password'
                 });
               });
           });
@@ -103,9 +103,29 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
         if (data.error) {
           done(data);
         } else {
-          done({secrets: data.response});
+          chrome.storage.local.get('privateKey',
+            function getPrivateKeyCallback(items) {
+              var privateKey = openpgp.key.readArmored(items.privateKey);
+              privateKey.keys[0].decrypt(__passphrase);
+
+              var pgpMessage = openpgp.message.readArmored(data.response);
+              openpgp
+                .decryptMessage(privateKey.keys[0], pgpMessage)
+                .then(function onSuccess(plaintext) {
+                  // success!
+                  done({secrets: JSON.parse(plaintext)});
+                })
+                .catch(function onError(error) {
+                  // something went wrong
+                  done({
+                    error: 400,
+                    response: 'Unknown error when decrypting received secrets'
+                  });
+                });
+            });
         }
       }
+
       server.getSecrets(getSecretsCallback);
     },
 
