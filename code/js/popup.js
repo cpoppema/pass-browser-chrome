@@ -17,6 +17,30 @@
     }
   }
 
+  function bindLinksHandlers() {
+    $('#go-to-options').on('click', function onClick() {
+      chrome.runtime.openOptionsPage();
+    });
+
+    $('#logout').on('click', function onClick() {
+      // kill progress
+      if ($('#all-secrets[data-progressjs]').length) {
+        var progress = progressJs('#all-secrets');
+        progress.kill();
+      }
+
+      // forget passphrase
+      msg.bg('forceLogout');
+
+      // toggle visibility
+      hideSecrets();
+      showUnlock();
+
+      // return focus
+      autofocus();
+    });
+  }
+
   function bindSecretsListHandlers() {
     // filter visible secrets when searching
     $('.container').on('input', '#search', function onChange(event) {
@@ -151,16 +175,7 @@
               .removeClass('btn-primary btn-success')
               .addClass('btn-danger');
           } else {
-            // show progress while retrieving secrets from server
-            var progress = progressJs('#unlock')
-              .setOptions({
-                theme: 'blueOverlayRadiusHalfOpacity',
-                overlayMode: true
-              });
-            progress.start();
-            progress.autoIncrease(100);
-
-            msg.bg('getSecrets', getSecretsCallback);
+            getSecrets();
           }
         });
     });
@@ -253,6 +268,12 @@
     return true;
   }
 
+  function getSecrets() {
+    // show progress while retrieving secrets from server
+    startProgress('#unlock');
+    msg.bg('getSecrets', getSecretsCallback);
+  }
+
   function getSecretsCallback(data) {
     // end progress
     var progress = progressJs('#unlock');
@@ -268,8 +289,8 @@
 
       $('#unlock span').text('Unlocked');
 
-      setTimeout(function showSecretsDelayed() {
-        showSecrets(data.secrets);
+      setTimeout(function renderSecretsDelayed() {
+        renderSecrets(data.secrets);
       }, 200);
     } else {
       // error
@@ -281,15 +302,20 @@
     }
   }
 
+  function hideLogout() {
+    $('#logout').hide();
+  }
+
   function hideSecrets() {
     $('#secrets').hide();
     $('#secrets').empty();
+
+    hideLogout();
   }
 
   function hideUnlock() {
-    $('#unlock-form').off('submit');
     $('#unlock-form').hide();
-    $('#unlock').removeClass('active');
+    $('#unlock-form').empty();
   }
 
   function inViewport(elem) {
@@ -306,7 +332,73 @@
     );
   }
 
+  function renderSecrets(secrets) {
+    var progress;
+    showSecrets(false);
+
+    // loop through secrets and show progress if any
+    if (secrets.length) {
+      // add secrets to #all-secrets
+      var secretTemplate = $($('#secrets-list-item-template').html());
+      $.each(secrets, function forEachSecret(i, secret) {
+        var template = secretTemplate.clone();
+
+        // add secret to list
+        template.find('.domain').text(secret.domain)
+          .attr('title', secret.domain);
+        template.find('.username').val(secret.username)
+          .attr('title', secret.username);
+        template
+          .attr('data-domain', secret.domain)
+          .attr('data-path', secret.path)
+          .attr('data-username-normalized', secret.username_normalized)
+          .attr('data-username', secret.username)
+          // do not display initially
+          .css('display', 'none');  // .hide() won't work yet
+        template.appendTo($('#all-secrets'));
+      });
+
+      if (!$('#all-secrets[data-progressjs]').length) {
+        // start progress while building list
+        progress = startProgress('#all-secrets');
+      } else {
+        // reset pace
+        progress = startProgress('#all-secrets');
+      }
+
+      // show secrets that matches the current page's domain to the top
+      fillTopSecrets(function fillTopSecretsCallback() {
+        // make secrets visible
+        $.each($('.secret'), function forEachSecretElem(i, secretElem) {
+          setTimeout(function showSecretDelayed() {
+            // show element
+            $(secretElem).show();
+
+            if ((i + 1) === secrets.length) {
+              // end progress
+              progress.end();
+
+              restoreLastQuery();
+            }
+          }, i * 25);
+        });
+      });
+    } else {
+      if ($('#all-secrets[data-progressjs]').length) {
+        // end progress
+        progress = progressJs('#all-secrets');
+        progress.end();
+      }
+      var noSecretsMessage = $($('#no-secrets-template').html());
+      noSecretsMessage.appendTo($('#secrets'));
+    }
+  }
+
   function restoreLastQuery() {
+    if (!$('#search').length) {
+      return;
+    }
+
     // filter list on render finish
     var currentQuery = $('#search').val().trim();
     if (!currentQuery) {
@@ -354,84 +446,108 @@
     });
   }
 
-  function showSecrets(secrets) {
+  function showLogout() {
+    $('#logout').show();
+  }
+
+  function showSecrets(showProgress) {
     msg.bg('setUnlockIcon');
 
-    hideUnlock();
+    if (!$('#secrets').is(':visible')) {
+      // toggle visibility
+      hideUnlock();
+      $('#secrets').show();
 
-    $('#secrets').show();
-
-    // loop through secrets and show progress if any
-    if (secrets.length) {
       var secretsList = $($('#secrets-list-template').html());
 
       // show search + list
       secretsList.appendTo($('#secrets'));
-
-      // add secrets to #all-secrets
-      var secretTemplate = $($('#secrets-list-item-template').html());
-      $.each(secrets, function forEachSecret(i, secret) {
-        var template = secretTemplate.clone();
-
-        // add secret to list
-        template.find('.domain').text(secret.domain)
-          .attr('title', secret.domain);
-        template.find('.username').val(secret.username)
-          .attr('title', secret.username);
-        template
-          .attr('data-domain', secret.domain)
-          .attr('data-path', secret.path)
-          .attr('data-username-normalized', secret.username_normalized)
-          .attr('data-username', secret.username)
-          // do not display initially
-          .css('display', 'none');  // .hide() won't work yet
-        template.appendTo($('#all-secrets'));
-      });
-
-      // start progress while building list
-      var animationDelay = 25;
-      var progressIncrement = Math.ceil(100 / secrets.length);
-      var progress = progressJs('#all-secrets');
-      progress.start().autoIncrease(progressIncrement, animationDelay);
-
-      // show secrets that matches the current page's domain to the top
-      fillTopSecrets(function fillTopSecretsCallback() {
-        // make secrets visible
-        $.each($('.secret'), function forEachSecretElem(i, secretElem) {
-          setTimeout(function showSecretDelayed() {
-            // show element
-            $(secretElem).show();
-
-            if ((i + 1) === secrets.length) {
-              // end progress
-              progress.end();
-
-              restoreLastQuery();
-            }
-          }, i * animationDelay);
-        });
-      });
-    } else {
-      var noSecretsMessage = $($('#no-secrets-template').html());
-      noSecretsMessage.appendTo($('#secrets'));
     }
+
+    if (showProgress) {
+      startProgress('#all-secrets');
+    }
+
+    chrome.storage.local.get('timeout', function getTimeoutCallback(items) {
+      if (items.timeout) {
+        showLogout();
+      }
+    });
   }
 
   function showUnlock() {
     msg.bg('setLockIcon');
 
+    // toggle visibility
     hideSecrets();
+
+    $('#unlock-form').show();
+    var unlockForm = $($('#unlock-form-template').html());
+    unlockForm.appendTo($('#unlock-form'));
+  }
+
+  function startProgress(elem, reset) {
+    var progress = progressJs(elem);
+
+    switch (elem) {
+      case '#unlock':
+        progress.setOptions({
+          theme: 'blueOverlayRadiusHalfOpacity',
+          overlayMode: true
+        });
+        progress.start().autoIncrease(100);
+        break;
+      case '#all-secrets':
+        var animationDelay = 25;
+        var nofSecrets = $('.secret').length;
+        var progressIncrement;
+
+        if (nofSecrets) {
+          var percentage = 100;
+
+          if (reset) {
+            var id = parseInt($(elem).attr('data-progressjs'));
+            var percentElement = $('[data-progressjs="' + id + '"]')
+                                   .filter('> .progressjs-inner');
+            var width = percentElement.style.width;
+            var existingPercent = parseInt(width.replace('%', ''));
+            percentage = percentage - existingPercent;
+          }
+          progressIncrement = Math.ceil(percentage / nofSecrets);
+        } else {
+          progressIncrement = 1;
+        }
+
+        progress.start().autoIncrease(progressIncrement, animationDelay);
+        break;
+    }
+
+    return progress;
   }
 
   $(function onDomReady() {
-    $('#go-to-options').on('click', function onClick() {
-      chrome.runtime.openOptionsPage();
-    });
-
+    bindLinksHandlers();
     bindSecretsListHandlers();
     bindUnlockFormHandlers();
 
-    // open popup by showing the unlock form
-    showUnlock();
+    // show nothing
+    hideSecrets();
+    hideUnlock();
+
+    // test if the passphrase has expired and show the form or secrets
+    msg.bg('testPassphraseIsExpired',
+      function testPassphraseIsExpiredCallBack(expired) {
+        if (expired) {
+          // open popup by showing unlock form
+          showUnlock();
+
+          // return focus
+          autofocus();
+        } else {
+          // open popup by showing secrets
+          showSecrets(true);
+          getSecrets();
+        }
+      });
   });
 })();

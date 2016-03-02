@@ -11,9 +11,10 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   var server = require('./server');
 
   // remember the passphrase to get secrets while in the popup, this is cleared
-  // when the popup hides
+  // when the popup hides or the timeout expires when the popup is hidden
   var __passphrase = null;
-
+  var handlers;
+  var popupIsOpen = false;
 
   /**
    * Helper function to copy text to clipboard.
@@ -69,7 +70,33 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     server.getPassword(path, username, getPasswordCallback);
   }
 
-  var handlers = {
+  /**
+   * Helper function to reset __passphrase and lock icon if timeout expired.
+   */
+  function testPassphraseIsExpiredCallBack(expired) {
+    if (expired && !popupIsOpen) {
+      __passphrase = null;
+      handlers.setLockIcon();
+    }
+  }
+
+  /**
+   * Re-validate current session if some particular settings have changed.
+   */
+  chrome.storage.onChanged.addListener(
+    function onChange(changes, namespace) {
+      for (var key in changes) {
+        if (key === 'timeout') {
+          handlers.testPassphraseIsExpired(testPassphraseIsExpiredCallBack);
+        }
+        if (key === 'server' || key === 'publicKey' || key === 'privateKey') {
+          __passphrase = null;
+          handlers.setLockIcon();
+        }
+      }
+    });
+
+  handlers = {
     copyUsername: function copyUsername(username, done) {
       copyToClipboard(username);
 
@@ -93,6 +120,12 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       getPassword(path, username, function getPasswordCallback(result) {
         done(result);
       });
+    },
+
+    forceLogout: function forceLogout() {
+      handlers.setLockIcon();
+      __passphrase = null;
+      chrome.storage.local.set({expireAt: null});
     },
 
     generateKeys: function generateKeys(options, done) {
@@ -146,11 +179,21 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       chrome.notifications.create(notificationId, options);
     },
 
-    onDisconnect: function onDisconnect(context, tabId) {
-      // forget the passphrase and change the icon when the popup is hidden
+    onConnect: function onConnect(context, tabId) {
+      // keep track of the popup's state to prevent expiring the passphrase
+      // when the popup is open (this would invalidate all actions from the
+      // popup, causing unexpected errors)
       if (context === 'popup') {
-        __passphrase = null;
-        this.setLockIcon();
+        popupIsOpen = true;
+      }
+    },
+
+    onDisconnect: function onDisconnect(context, tabId) {
+      // immediately test if the passphrase is expired when the popup hides,
+      // this works regardless of the timeout setting
+      if (context === 'popup') {
+        popupIsOpen = false;
+        handlers.testPassphraseIsExpired(testPassphraseIsExpiredCallBack);
       }
     },
 
@@ -171,22 +214,98 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     testPassphrase: function testPassphrase(passphrase, done) {
-      // remember passhrase while popup is visible
-      __passphrase = passphrase;
-
       // test passphrase with private key
-      function getPrivateKeyCallback(items) {
-        var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-        if (typeof privateKey === typeof void 0) {
-          done(null);
-        } else {
-          var unlocked = privateKey.decrypt(passphrase);
-          done(unlocked);
-        }
+      chrome.storage.local.get(['privateKey', 'timeout', 'publicKey'],
+        function getPrivateKeyCallback(items) {
+          var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+          if (typeof privateKey === typeof void 0) {
+            done(null);
+          } else {
+            var unlocked = privateKey.decrypt(passphrase);
+
+            if (unlocked === true) {
+              // at least remember passhrase while popup is visible
+              __passphrase = passphrase;
+
+              if (items.timeout) {
+                // set expiration time for passphrase, this will be checked
+                // the next time the popup is opened
+                var now = new Date().getTime();
+                var timeout = items.timeout * 1000; // convert to ms
+                var expireAt = now + timeout;
+
+                // save an encrypted value of expireAt
+                var publicKey = items.publicKey;
+                openpgp
+                  .encryptMessage(
+                      openpgp.key.readArmored(publicKey).keys,
+                      '' + expireAt)
+                  .then(function sendPgpResponse(armored) {
+                    var pgpMessage = armored;
+                    chrome.storage.local.set({expireAt: pgpMessage});
+
+                    // let passphrase self-expire
+                    setTimeout(function testPassphraseIsExpiredTimeout() {
+                      var cb = testPassphraseIsExpiredCallBack;
+                      handlers.testPassphraseIsExpired(cb);
+                    }, timeout);
+
+                    done(unlocked);
+                  });
+              } else {
+                done(unlocked);
+              }
+            } else {
+              done(unlocked);
+            }
+          }
+        });
+    },
+
+    testPassphraseIsExpired: function testPassphraseIsExpired(done) {
+      var expired;
+
+      if (__passphrase === null) {
+        done(true);
+      } else {
+        chrome.storage.local.get(['timeout', 'expireAt', 'privateKey'],
+          function getTimeoutCallback(items) {
+            if (!items.expireAt || !items.timeout) {
+              expired = true;
+              done(expired);
+            } else {
+              var privateKey = openpgp.key.readArmored(items.privateKey);
+              privateKey.keys[0].decrypt(__passphrase);
+
+              // read an encrypted value of expireAt
+              var pgpMessage = openpgp.message.readArmored(items.expireAt);
+              openpgp
+                .decryptMessage(privateKey.keys[0], pgpMessage)
+                .then(function onSuccess(plaintext) {
+                  // success!
+                  var now = new Date().getTime();
+                  try {
+                    var expireAt = parseInt(plaintext, 10);
+                    expired = expireAt < now;
+                  } catch (e) {
+                    expired = true;
+                  }
+
+                  done(expired);
+                })
+                .catch(function onError(error) {
+                  // something went wrong
+                  expired = true;
+                  done(expired);
+                });
+            }
+          });
       }
-      chrome.storage.local.get('privateKey', getPrivateKeyCallback);
     }
   };
 
   require('./modules/msg').init('bg', handlers);
+
+  // on load (also when the browser starts)
+  handlers.testPassphraseIsExpired(testPassphraseIsExpiredCallBack);
 })();

@@ -10,21 +10,24 @@
   </head>
   <body>
     <div class="container">
-      <div class="options-link text-xs-right">
+      <div class="links text-xs-right">
+        <button id="logout" type="button" class="btn btn-secondary btn-sm" style="display: none;">Logout</button>
         <button id="go-to-options" type="button" class="btn btn-secondary btn-sm">Options</button>
       </div>
 
       <div class="alerts"></div>
 
       <!-- unlock form -->
-      <form id="unlock-form" class="form-signin" autocomplete="off">
-        <input type="password" id="passphrase" class="form-control" placeholder="Passphrase" autofocus>
-        <button id="unlock" class="btn btn-lg btn-primary btn-block"><span>Unlock</span></button>
-      </form>
+      <form id="unlock-form" class="form-signin" autocomplete="off"></form>
 
-      <!-- list of secrets, visible after unlock -->
+      <!-- list of secrets -->
       <div id="secrets"></div>
     </div>
+
+    <template id="unlock-form-template">
+      <input type="password" id="passphrase" class="form-control" placeholder="Passphrase" autofocus="">
+      <button id="unlock" class="btn btn-lg btn-primary btn-block"><span>Unlock</span></button>
+    </template>
 
     <template id="secrets-list-template">
       <form id="search-form" class="form-search" autocomplete="off">

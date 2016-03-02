@@ -18,7 +18,7 @@
           </fieldset>
           <fieldset class="form-group">
             <label for="passphrase">Passphrase *</label>
-            <small class="text-muted">This password is required every time you want to access your passwords.</small>
+            <small class="text-muted">This password is required every time you need to unlock your passwords.</small>
              <input type="password" id="passphrase" class="form-control" name="passphrase" required>
           </fieldset>
           <fieldset class="form-group">
@@ -37,6 +37,38 @@
               <div class="col-xs-6">
                 <input type="text" id="public-key-id" class="form-control" name="key-id" disabled>
               </div>
+            </div>
+          </fieldset>
+          <fieldset class="form-group">
+            <label for="passphrase">How long do you want your passphrase remembered ?</label>
+            <div id="timeout" class="btn-group" data-toggle="buttons">
+              <label class="btn btn-success-outline">
+                <input type="radio" name="timeout" value="0"> Never
+              </label>
+              <label class="btn btn-primary-outline">
+                <input type="radio" name="timeout" value="30"> 30 seconds
+              </label>
+              <label class="btn btn-primary-outline">
+                <input type="radio" name="timeout" value="60"> 1 min
+              </label>
+              <label class="btn btn-primary-outline">
+                <input type="radio" name="timeout" value="120"> 2 min
+              </label>
+              <label class="btn btn-primary-outline">
+                <input type="radio" name="timeout" value="300"> 5 min
+              </label>
+              <label class="btn btn-warning-outline">
+                <input type="radio" name="timeout" value="600"> 10 min
+              </label>
+              <label class="btn btn-warning-outline">
+                <input type="radio" name="timeout" value="1800"> 30 min
+              </label>
+              <label class="btn btn-danger-outline">
+                <input type="radio" name="timeout" value="3600"> 1 h
+              </label>
+              <label class="btn btn-danger-outline">
+                <input type="radio" name="timeout" value="14400"> 4 h
+              </label>
             </div>
           </fieldset>
           <button type="button" id="key-gen" class="btn btn-primary">Generate key</button>

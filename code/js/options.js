@@ -27,7 +27,8 @@
     // enable save button when one of these fields change, other field changes
     // require a new keypair
     var fieldNames = [
-      'server'
+      'server',
+      'timeout',
     ];
     $.each(fieldNames, function bindInputChange(i, fieldName) {
       // get field element
@@ -36,8 +37,9 @@
       // bind event
       $(field).off('input');
       var originalValue = $(field).val();
-      $(field).on('input', function toggleSaveOnChange() {
-        var fieldHasChanged = $(field).val() !== originalValue;
+      $(field).on('input change', function toggleSaveOnChange() {
+        var fieldHasChanged = $(field).is('[type="checkbox"],[type="radio"]') ||
+          $(field).val() !== originalValue;
         var isRequired = $(field).is('[required]');
 
         if (fieldHasChanged && !isRequired ||
@@ -121,13 +123,25 @@
   }
 
   function preloadOptionsForm() {
-    chrome.storage.local.get(['publicKey', 'server'],
+    chrome.storage.local.get(['publicKey', 'server', 'timeout'],
       function getCurrentOptionsCallback(items) {
         // get server address
         if (items.server) {
           $('#server').val(items.server);
         }
 
+        // get timeout in seconds
+        if (typeof items.timeout !== typeof void 0) {
+          $('#timeout [value="' + items.timeout + '"]')
+            .prop('checked', true)
+            .parent().addClass('active');
+        } else {
+          $('#timeout :input:first')
+            .prop('checked', true)
+            .parent().addClass('active');
+        }
+
+        // get public key
         if (items.publicKey) {
           $('#public-key').val(items.publicKey);
 
@@ -154,6 +168,7 @@
   function saveOptions(event) {
     var options = {
       server: $('#server').val().trim(),
+      timeout: parseInt($('#timeout input:checked').val(), 10),
     };
     if (keyPair.publicKey) {
       options.publicKey = keyPair.publicKey;
@@ -174,6 +189,13 @@
     disableSaveButton();
   }
 
+  function toggleTimeout(event) {
+    $('#timeout .active').removeClass('active');
+    $(event.target)
+      .prop('checked', true)
+      .parent().addClass('active');
+  }
+
   $(function onDomReady() {
     form = $('#options-form');
     $(form).on('submit', function onSubmit(event) {
@@ -191,6 +213,7 @@
 
     // bind click events
     $('#key-gen').on('click', generateKeyPair);
+    $('#timeout :input').on('change', toggleTimeout);
     $('#save').on('click', saveOptions);
   });
 })();
