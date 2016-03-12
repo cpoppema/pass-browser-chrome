@@ -10,6 +10,13 @@
   var msg = require('./modules/msg').init('popup');
 
 
+  function autofocus() {
+    var elem = $('[autofocus]:visible');
+    if (elem && inViewport(elem.get(0))) {
+      $(elem).focus();
+    }
+  }
+
   function bindSecretsListHandlers() {
     // filter visible secrets when searching
     $('.container').on('input', '#search', function onChange(event) {
@@ -255,6 +262,20 @@
     $('#unlock').removeClass('active');
   }
 
+  function inViewport(elem) {
+    var html;
+    var rect;
+    html = document.documentElement;
+    rect = elem.getBoundingClientRect();
+
+    return (!!rect &&
+      rect.bottom >= 0 &&
+      rect.right >= 0 &&
+      rect.top <= html.clientHeight &&
+      rect.left <= html.clientWidth
+    );
+  }
+
   function restoreLastQuery() {
     // filter list on render finish
     var currentQuery = $('#search').val().trim();
@@ -264,16 +285,16 @@
           var lastQuery = items.lastQuery;
           if (lastQuery) {
             $('#search').val(lastQuery);
-            $('#search').focus();
+            autofocus();
             $('#search').select();
             filterSecrets(lastQuery);
           } else {
-            $('#search').focus();
+            autofocus();
           }
         });
     } else {
       filterSecrets(currentQuery);
-      $('#search').focus();
+      autofocus();
     }
   }
 
