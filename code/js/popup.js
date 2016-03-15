@@ -94,6 +94,36 @@
           }
         });
     });
+
+    // copy username and/or password into a form
+    $('.container').on('click', '.fill-form', function onClick(event) {
+      var secret = $(event.target).closest('.secret');
+      var path = $(secret).data('path');
+      var username = $(secret).data('username');
+
+      // get currently visible tab id
+      chrome.tabs.query({active: true, currentWindow: true},
+        function queryTabsCallback(tabs) {
+          var tabId = tabs[0].id;
+
+          msg.bg('fillForm', path, username,
+            function fillFormCallback(data) {
+              // remove any success or danger classes from other buttons
+              $('.fill-form').removeClass('label-success label-danger');
+
+              if (data.error) {
+                $(event.target).removeClass('label-success');
+                $(event.target).addClass('label-danger');
+
+                showErrorNotification(data.error + ': ' + data.response);
+              } else {
+                msg.bcast(tabId, ['ct'], 'fillForm', username, data.password);
+                $(event.target).removeClass('label-danger');
+                $(event.target).addClass('label-success');
+              }
+            });
+        });
+    });
   }
 
   function bindUnlockFormHandlers() {
