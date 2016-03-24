@@ -127,7 +127,7 @@
   }
 
   function bindUnlockFormHandlers() {
-    $('#unlock-form').on('submit', function onSubmit() {
+    $('#unlock-form').on('submit', function onSubmit(event) {
       // don't go anywhere
       event.preventDefault();
 
