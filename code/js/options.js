@@ -3,7 +3,7 @@
 (function options() {
   var $ = require('./libs/jquery');
 
-  var msg = require('./modules/msg').init('popup');
+  var msg = require('./modules/msg').init('options');
 
   var form,
     keyPair = {
