@@ -162,12 +162,13 @@
       options.privateKey = keyPair.privateKey;
     }
 
-    chrome.storage.local.set(options, function saveOptionsCallback() {
-      $('#status').text('Options saved.');
-      setTimeout(function hideStatus() {
-        $('#status').text('');
-      }, 750);
-    });
+    chrome.storage.local.set(options,
+      function saveOptionsCallback() {
+        $('#status').text('Options saved.');
+        setTimeout(function hideStatus() {
+          $('#status').text('');
+        }, 750);
+      });
 
     enableSaveOnFormChange();
     disableSaveButton();
