@@ -1,7 +1,7 @@
 {
   "name": "pass-browser-chrome",
   "license": "GNU GPL v3.0",
-  "description": "Make secrets accessible from a person's ~/.password-store",
+  "description": "Make secrets easily accessible from your pass' ~/.password-store",
   "author": "Cornelis Poppema",
   "version": "0.3.0",
   "engines": {
