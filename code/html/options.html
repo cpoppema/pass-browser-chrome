@@ -14,17 +14,17 @@
           <fieldset class="form-group">
             <label for="key-name">Key name *</label>
             <small class="text-muted">Name of this key to identify it with.</small>
-            <input type="text" id="key-name" class="form-control" name="key-name" placeholder="pass-extension-chrome" required>
+            <input type="text" id="key-name" class="form-control" name="key-name" placeholder="pass-extension-chrome" generate-required>
           </fieldset>
           <fieldset class="form-group">
             <label for="passphrase">Passphrase *</label>
             <small class="text-muted">This password is required every time you need to unlock your passwords.</small>
-             <input type="password" id="passphrase" class="form-control" name="passphrase" required>
+             <input type="password" id="passphrase" class="form-control" name="passphrase" generate-required>
           </fieldset>
           <fieldset class="form-group">
             <label for="server">Remote server *</label>
             <small class="text-muted">Server address.</small>
-            <input type="text" id="server" class="form-control" name="server" required>
+            <input type="text" id="server" class="form-control" name="server" placeholder="https://" save-required pattern="https?://.*">
           </fieldset>
           <fieldset class="form-group">
             <label for="passphrase">Public key</label>

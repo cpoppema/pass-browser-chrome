@@ -56,27 +56,6 @@
     });
   }
 
-  function formIsValid() {
-    // show warnings for required input
-    $.each($(form).find(':input[required]'),
-      function checkRequiredInputs(i, inputElem) {
-        if (!$(inputElem).val().trim().length) {
-          $(inputElem)
-            .addClass('form-control-warning')
-            .closest('.form-group')
-            .addClass('has-warning');
-        } else {
-          $(inputElem)
-            .removeClass('form-control-warning')
-            .closest('.form-group')
-            .removeClass('has-warning');
-        }
-      });
-
-    // return true if there is still an error with the form input
-    return !$(form).find('.has-warning').length;
-  }
-
   function generateKeyPair() {
     // reset in-memory form values
     keyPair = {
@@ -88,8 +67,8 @@
     $('#public-key, #public-key-id').val('');
     disableSaveButton();
 
-    if (!formIsValid()) {
-      $(form).find('.has-warning:first :input').focus();
+    if (!generateKeyPairFormIsValid()) {
+      $(form).find('.has-warning :input[generate-required]').eq(0).focus();
     } else {
       // show indications of progress
       $('#key-gen').prop('disabled', true);
@@ -120,6 +99,27 @@
           });
       });
     }
+  }
+
+  function generateKeyPairFormIsValid() {
+    // show warnings for required input
+    $.each($(form).find(':input[generate-required]'),
+      function checkRequiredInputs(i, inputElem) {
+        if (!$(inputElem).val().trim().length) {
+          $(inputElem)
+            .addClass('form-control-warning')
+            .closest('.form-group')
+            .addClass('has-warning');
+        } else {
+          $(inputElem)
+            .removeClass('form-control-warning')
+            .closest('.form-group')
+            .removeClass('has-warning');
+        }
+      });
+
+    // return true if there is still an error with the form input
+    return !$(form).find('.has-warning :input[generate-required]').length;
   }
 
   function preloadOptionsForm() {
@@ -165,28 +165,72 @@
       });
   }
 
-  function saveOptions(event) {
-    var options = {
-      server: $('#server').val().trim(),
-      timeout: parseInt($('#timeout input:checked').val(), 10),
-    };
-    if (keyPair.publicKey) {
-      options.publicKey = keyPair.publicKey;
-    }
-    if (keyPair.privateKey) {
-      options.privateKey = keyPair.privateKey;
-    }
-
-    chrome.storage.local.set(options,
-      function saveOptionsCallback() {
-        $('#status').text('Options saved.');
-        setTimeout(function hideStatus() {
-          $('#status').text('');
-        }, 750);
+  function saveFormIsValid() {
+    // show warnings for required input
+    $.each($(form).find(':input[save-required]'),
+      function checkRequiredInputs(i, inputElem) {
+        if (!$(inputElem).val().trim().length) {
+          $(inputElem)
+            .addClass('form-control-warning')
+            .closest('.form-group')
+            .addClass('has-warning');
+        } else {
+          $(inputElem)
+            .removeClass('form-control-warning')
+            .closest('.form-group')
+            .removeClass('has-warning');
+        }
       });
 
-    enableSaveOnFormChange();
-    disableSaveButton();
+    // show warnings for input not matching their patterns
+    $.each($(form).find(':input[pattern]'),
+      function checkPatternedInputs(i, inputElem) {
+        if (!new RegExp($(inputElem).attr('pattern'))
+            .test($(inputElem).val())) {
+          $(inputElem)
+            .addClass('form-control-warning')
+            .closest('.form-group')
+            .addClass('has-warning');
+        } else {
+          $(inputElem)
+            .removeClass('form-control-warning')
+            .closest('.form-group')
+            .removeClass('has-warning');
+        }
+      });
+
+    // return true if there is still an error with the form input
+    return !$(form).find('.has-warning :input[save-required],' +
+                         '.has-warning :input[pattern]').length;
+  }
+
+  function saveOptions(event) {
+    if (!saveFormIsValid()) {
+      $(form).find('.has-warning :input[save-required],' +
+                   '.has-warning :input[pattern]').eq(0).focus();
+    } else {
+      var options = {
+        server: $('#server').val().trim(),
+        timeout: parseInt($('#timeout input:checked').val(), 10),
+      };
+      if (keyPair.publicKey) {
+        options.publicKey = keyPair.publicKey;
+      }
+      if (keyPair.privateKey) {
+        options.privateKey = keyPair.privateKey;
+      }
+
+      chrome.storage.local.set(options,
+        function saveOptionsCallback() {
+          $('#status').text('Options saved.');
+          setTimeout(function hideStatus() {
+            $('#status').text('');
+          }, 750);
+        });
+
+      enableSaveOnFormChange();
+      disableSaveButton();
+    }
   }
 
   function toggleTimeout(event) {
