@@ -257,11 +257,12 @@
 
   function fuzzyContains(hay, needle) {
     hay = hay.toLowerCase();
-
-    var i = 0, n = -1, l;
     needle = needle.toLowerCase();
-    for (; l = needle[i++] ;) {
-      if (!~(n = hay.indexOf(l, n + 1))) {
+
+    var lastIndex = -1;
+    for (var i = 0; i < needle.length; i++) {
+      var l = needle[i];
+      if ((lastIndex = hay.indexOf(l, lastIndex + 1)) === -1) {
         return false;
       }
     }
