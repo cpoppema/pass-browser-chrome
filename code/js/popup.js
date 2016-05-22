@@ -209,18 +209,35 @@
   function fillTopSecrets(done) {
     chrome.tabs.query({active: true, currentWindow: true},
       function queryTabsCallback(tabs) {
+        var currentDomain = '';
+        var currentSubdomain = '';
+
         var parts = parseDomain(tabs[0].url);
         if (parts === null) {
-          // invalid domain (extension pages, settings etc.)
-          done();
-          return;
+          parts = {};
+          parts.scheme = tabs[0].url.split('://')[0];
+
+          if (['http',
+               'https',
+               'file',
+              ].indexOf(parts.scheme) === -1) {
+            // invalid (extension pages, settings etc.)
+            done();
+            return;
+          } else {
+            // ip addresses or simply a hostname, look for exact match instead
+            // of matching parsed (sub)domain
+            parts.host = tabs[0].url.split('://')[1].split('/')[0];
+            parts.path = tabs[0].url.split('://')[1].split('/')[1];
+
+            currentDomain = parts.host;
+          }
+        } else {
+          currentDomain = [parts.domain, parts.tld].join('.');
+          currentSubdomain = [parts.subdomain, currentDomain].join('.');
         }
 
-        // place domain matches on top, with subdomain matches first
-        var currentDomain = [parts.domain, parts.tld].join('.');
-        var currentSubdomain = [parts.subdomain, currentDomain].join('.');
-
-        // find matches
+        // place domain matches on top of the rest, with subdomain matches first
         var subdomainMatches = [];
         var domainMatches = [];
         $('#all-secrets .secret').each(
@@ -228,13 +245,17 @@
             var secretDomain = $(secretElem).attr('data-domain');
 
             // move matches to #top-list
-            if (secretDomain.indexOf(currentSubdomain) === 0) {
-              subdomainMatches.push($(secretElem).clone());
-              $(secretElem).remove();
+            if (currentSubdomain.length) {
+              if (secretDomain.indexOf(currentSubdomain) === 0) {
+                subdomainMatches.push($(secretElem).clone());
+                $(secretElem).remove();
+              }
             }
-            if (secretDomain.indexOf(currentDomain) === 0) {
-              domainMatches.push($(secretElem).clone());
-              $(secretElem).remove();
+            if (currentDomain.length) {
+              if (secretDomain.indexOf(currentDomain) === 0) {
+                domainMatches.push($(secretElem).clone());
+                $(secretElem).remove();
+              }
             }
           });
 
