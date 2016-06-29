@@ -188,7 +188,7 @@
   function filterSecrets(query) {
     if (query) {
       // filter list
-      $('.secret').each(function forEachSecretElem(i, secretElem) {
+      $('#all-secrets .secret').each(function forEachSecretElem(i, secretElem) {
         var domain = $(secretElem).attr('data-domain');
         var username = $(secretElem).attr('data-username');
         var usernameNormalized = $(secretElem).attr('data-username-normalized');
