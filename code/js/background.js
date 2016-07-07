@@ -30,10 +30,10 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   }
 
   /**
-   * Retrieve password from server.
+   * Retrieve secret from server.
    */
-  function getPassword(path, username, done) {
-    function getPasswordCallback(data) {
+  function getSecret(path, username, done) {
+    function getSecretCallback(data) {
       if (data.error) {
         done(data);
       } else {
@@ -67,7 +67,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       }
     }
 
-    server.getPassword(path, username, getPasswordCallback);
+    server.getSecret(path, username, getSecretCallback);
   }
 
   /**
@@ -104,7 +104,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     copyPassword: function copyPassword(path, username, done) {
-      getPassword(path, username, function getPasswordCallback(result) {
+      getSecret(path, username, function getSecretCallback(result) {
         if (!result.error) {
           // copy
           copyToClipboard(result.password);
@@ -117,7 +117,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     fillForm: function fillForm(path, username, done) {
-      getPassword(path, username, function getPasswordCallback(result) {
+      getSecret(path, username, function getSecretCallback(result) {
         done(result);
       });
     },
@@ -210,7 +210,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     showPassword: function showPassword(path, username, done) {
-      getPassword(path, username, done);
+      getSecret(path, username, done);
     },
 
     testPassphrase: function testPassphrase(passphrase, done) {

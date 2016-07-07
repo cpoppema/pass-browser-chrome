@@ -65,7 +65,7 @@
     doPostRequest('/secrets/', {}, done);
   };
 
-  Server.prototype.getPassword = function getPassword(path, username, done) {
+  Server.prototype.getSecret = function getSecret(path, username, done) {
     doPostRequest('/secret/', {
       path: path,
       username: username
