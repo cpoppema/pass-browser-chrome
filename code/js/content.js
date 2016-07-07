@@ -13,12 +13,14 @@ function debug() {
   var $ = require('./libs/jquery');
 
   var formSelector = 'form';
-  var usernameFieldSelector = ['[type="email"]:visible',
-                               '[type="text"]:visible',
-                               'input:not([type]):visible',
-                               '[type="textbox"]',
-                              ].join(',');
-  var passwordFieldSelector = '[type="password"]';
+  var TEXT_SELECTOR = ['[type="email"]:visible',
+                       '[type="text"]:visible',
+                       'input:not([type]):visible',
+                       '[type="textbox"]',
+                      ].join(',');
+  var PASSWORD_SELECTOR = '[type="password"]';
+  var usernameFieldSelector;
+  var passwordFieldSelector;
 
 
   /**
@@ -205,6 +207,31 @@ function debug() {
   }
 
   /**
+   * Helper function to find a meta field.
+   */
+  function findMetaField(container, metaKey) {
+    var metaField;
+    var metaSelector = '[name="' + metaKey + '"]';
+
+    // in case the page has autofocus, or the user selected an input already,
+    // use this element if it matches passwordFieldSelector
+    if ($(document.activeElement).is(metaSelector)) {
+      return document.activeElement;
+    }
+
+    // no selected element: fallback to finding a password field ourselves
+    metaField = $(container).find(metaSelector);
+    if ($(metaField).length === 1) {
+      return metaField.get(0);
+    } else if ($(metaField).length > 1) {
+      // multiple fields found, maybe there is only one visible
+      if ($(metaField).filter(':visible').length === 1) {
+        return metaField.filter(':visible').get(0);
+      }
+    }
+  }
+
+  /**
    * Helper function to trigger events that the site might listen to, this can
    * help removing custom placeholders for example.
    */
@@ -215,16 +242,53 @@ function debug() {
     });
   }
 
+  /**
+   * Helper function to append exclusionSelector to every separate selector in
+   * given selectors.
+   */
+  function addExclusionSelector(selectors, exclusionSelector) {
+    return $.map(selectors.split(','), function addNotSelector(selector) {
+      return selector + exclusionSelector;
+    }).join(',');
+  }
+
+  /**
+   * Helper function to build an exclusion selector for given meta data.
+   */
+  function buildExclusionSelector(metaKeys) {
+    var exclusionSelector = '';
+    if (metaKeys.length) {
+      exclusionSelector = $.map(metaKeys, function buildMetaSelector(metaKey) {
+        return '[name="' + metaKey + '"]';
+      });
+      exclusionSelector = ':not(' + exclusionSelector.join(',') + ')';
+    }
+    return exclusionSelector;
+  }
+
   var handlers = {
-    fillForm: function fillForm(username, password) {
+    fillForm: function fillForm(username, password, formMeta) {
+      // write a selector to exclude meta fields
+      var excludeMetaSelector = buildExclusionSelector(Object.keys(formMeta));
+
+      // initialize global selectors
+      usernameFieldSelector = TEXT_SELECTOR;
+      passwordFieldSelector = PASSWORD_SELECTOR;
+      if (excludeMetaSelector) {
+        usernameFieldSelector = addExclusionSelector(usernameFieldSelector,
+                                                     excludeMetaSelector);
+        passwordFieldSelector = addExclusionSelector(passwordFieldSelector,
+                                                     excludeMetaSelector);
+      }
+
       var container = findForm();
       if (container === null) {
         container = document.body;
       }
 
       var usernameField = findUsernameField(container);
-      var passwordField = findPasswordField(container);
 
+      // fill username if any
       if (usernameField) {
         $(usernameField).val(username);
         triggerChange($(usernameField).get(0));
@@ -233,11 +297,27 @@ function debug() {
       }
 
       // passwordField is allowed to be invisible if there is a usernameField
+      var passwordField = findPasswordField(container);
       if ($(passwordField).is(':visible') || passwordField && usernameField) {
         $(passwordField).val(password);
         triggerChange($(passwordField).get(0));
       } else {
         debug('no field found for password in container:', container);
+      }
+
+      // fill meta fields
+      for (var key in formMeta) {
+        if (formMeta.hasOwnProperty(key)) {
+          console.log(key, formMeta[key]);
+          var metaField = findMetaField(container, key);
+          if (metaField) {
+            $(metaField).val(formMeta[key]);
+            triggerChange($(metaField).get(0));
+          } else {
+            debug('no field found for meta data "' + key + '" in container:',
+                  container);
+          }
+        }
       }
     },
   };

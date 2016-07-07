@@ -141,7 +141,22 @@
 
                 showErrorNotification(data.error + ': ' + data.response);
               } else {
-                msg.bcast(tabId, ['ct'], 'fillForm', username, data.password);
+                var formMeta = {};
+
+                if (data.meta) {
+                  var metaData = data.meta.split('\n');
+                  metaData.forEach(function getMeta(meta) {
+                    var firstPos = meta.indexOf(': ');
+                    if (firstPos !== -1) {
+                      var key = meta.slice(0, firstPos);
+                      var value = meta.slice(firstPos + 2);
+                      formMeta[key] = value;
+                    }
+                  });
+                }
+
+                msg.bcast(tabId, ['ct'], 'fillForm',
+                          username, data.password, formMeta);
                 $(event.target).removeClass('label-danger');
                 $(event.target).addClass('label-success');
               }

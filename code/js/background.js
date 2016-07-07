@@ -48,13 +48,27 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
               .then(function onSuccess(plaintext) {
                 // success!
 
-                // read only the first line as the password
-                var eol = plaintext.indexOf('\n');
-                if (eol !== -1) {
-                  plaintext = plaintext.slice(0, eol);
+                var lfPos = plaintext.indexOf('\n');
+                var meta;
+                var password;
+                if (lfPos !== -1) {
+                  // read the first line as the password
+                  password = plaintext.slice(0, lfPos);
+
+                  // read the rest as (multiline) meta data
+                  if (lfPos + 1 < plaintext.length) {
+                    meta = plaintext.slice(lfPos + 1);
+
+                    // remove trailing \n
+                    if (meta.length - 1 === meta.lastIndexOf('\n')) {
+                      meta = meta.slice(0, meta.lastIndexOf('\n'));
+                    }
+                  }
+                } else {
+                  password = plaintext;
                 }
 
-                done({password: plaintext});
+                done({password: password, meta: meta});
               })
               .catch(function onError(error) {
                 // something went wrong
