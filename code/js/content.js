@@ -211,7 +211,7 @@ function debug() {
   function triggerChange(elem) {
     var eventNames = ['change', 'input', 'keydown', 'keyup'];
     $.each(eventNames, function dispatchEvent(i, eventName) {
-      elem.dispatchEvent(new Event(eventName));
+      elem.dispatchEvent(new Event(eventName, {bubbles: true}));
     });
   }
 
