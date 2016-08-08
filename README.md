@@ -67,7 +67,7 @@ Go6GqViRD01jmnVK8ysd8kyYKQPzKh61DiiwJkERbU7w6in8r483QliQdKH/
 -----END PGP PUBLIC KEY BLOCK-----" | gpg --import -
 ```
 
-You will see something like this, all you need to remember is one thing from this output: the key ID. The ID here is `5AF8663E`. You can also user the longer key ID you can find in the plugin options. In this example it would be A6A041765AF8663E.
+You will see something like this, all you need to remember is one thing from this output: the key ID. The ID here is `5AF8663E`. You can also use the longer key ID you can find in the plugin options. In this example it would be A6A041765AF8663E.
 
 ```Shell
 gpg: /home/me/.gnupg/trustdb.gpg: trustdb created
@@ -90,7 +90,7 @@ Run
 gpg --sign-key 5AF8663E
 ```
 
-Signing requires an existing keypair on your server. A keypair is also required for `pass` to add new secrets.
+Signing requires an existing trusted key on your server. A trusted key is also required for `pass` to add new secrets.
 
 **Tell pass to allow this key**
 
@@ -100,7 +100,7 @@ All that is left is to tell `pass` to encrypt your secrets using this public key
 pass init {KEY ID 1} {KEY ID 2}
 ```
 
-So let's say your existing keypair's ID is AF3D26E5, run
+So let's say your existing trusted key's ID is AF3D26E5, run
 ```Shell
 pass init AF3D26E5 5AF8663E
 ```
