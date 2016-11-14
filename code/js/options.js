@@ -108,7 +108,7 @@
         $('#public-key').val(keyPair.publicKey);
 
         $('#passphrase').val('');
-        $('#key-gen').prop('disabled', false);
+        $('#key-gen').prop('readonly', false);
 
         $(form).data('contains-new-key', true);
         enableSaveButton();
