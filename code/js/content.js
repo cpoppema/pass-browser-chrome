@@ -209,10 +209,10 @@ function debug() {
    * help removing custom placeholders for example.
    */
   function triggerChange(elem) {
-    var eventNames = ['change', 'input', 'keydown', 'keyup'];
-    $.each(eventNames, function dispatchEvent(i, eventName) {
-      elem.dispatchEvent(new Event(eventName, {bubbles: true}));
-    });
+    elem.dispatchEvent(new window.Event('change', {bubbles: true}));
+    elem.dispatchEvent(new window.Event('input', {bubbles: true}));
+    elem.dispatchEvent(new window.KeyboardEvent('keydown', {bubbles: true}));
+    elem.dispatchEvent(new window.KeyboardEvent('keyup', {bubbles: true}));
   }
 
   var handlers = {
