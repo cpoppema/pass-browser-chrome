@@ -5,24 +5,24 @@
   "author": "Cornelis Poppema",
   "version": "0.6.2",
   "engines": {
-    "node": ">= 4.2.6"
+    "node": ">= 8.2.1"
   },
   "dependencies": {
-    "bootstrap": "^4.0.0-alpha.2",
-    "openpgp": "~1.4.1",
-    "parse-domain": "^0.2.0"
+    "bootstrap": "^4.0.0-alpha.6",
+    "openpgp": "^2.5.11",
+    "parse-domain": "^1.1.0"
   },
   "devDependencies": {
-    "browserify": "^13.0.0",
-    "grunt": "^0.4.5",
-    "grunt-browserify": "^4.0.1",
-    "grunt-contrib-clean": "^0.7.0",
-    "grunt-contrib-copy": "^0.8.2",
-    "grunt-contrib-jshint": "^0.12.0",
-    "grunt-contrib-uglify": "^0.11.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-exec": "^0.4.6",
-    "grunt-mkdir": "^0.1.2"
+    "browserify": "^14.4.0",
+    "grunt": "^1.0.1",
+    "grunt-browserify": "^5.2.0",
+    "grunt-contrib-clean": "^1.1.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-jshint": "^1.1.0",
+    "grunt-contrib-uglify": "^3.1.0",
+    "grunt-contrib-watch": "^1.0.0",
+    "grunt-exec": "^3.0.0",
+    "grunt-mkdir": "^1.0.0"
   },
   "export-symbol": "extensionSkeleton.exports"
 }

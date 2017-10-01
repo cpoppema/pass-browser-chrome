@@ -39,24 +39,29 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       } else {
         chrome.storage.local.get('privateKey',
           function getPrivateKeyCallback(items) {
-            var privateKey = openpgp.key.readArmored(items.privateKey);
-            privateKey.keys[0].decrypt(__passphrase);
+            var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+            privateKey.decrypt(__passphrase);
 
             var pgpMessage = openpgp.message.readArmored(data.response);
             openpgp
-              .decryptMessage(privateKey.keys[0], pgpMessage)
+              .decrypt({
+                message: pgpMessage,
+                privateKey: privateKey,
+              })
               .then(function onSuccess(plaintext) {
                 // success!
 
                 // read only the first line as the password
-                var eol = plaintext.indexOf('\n');
+                var eol = plaintext.data.indexOf('\n');
                 if (eol !== -1) {
-                  plaintext = plaintext.slice(0, eol);
+                  plaintext.data = plaintext.data.slice(0, eol);
                 }
 
-                done({password: plaintext});
+                done({password: plaintext.data});
               })
               .catch(function onError(error) {
+                console.error(error);
+
                 // something went wrong
                 done({
                   error: 400,
@@ -129,7 +134,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     generateKeys: function generateKeys(options, done) {
-      openpgp.generateKeyPair(options).then(done);
+      openpgp.generateKey(options).then(done);
     },
 
     getIdForKey: function getIdForKey(key, done) {
@@ -145,17 +150,22 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
         } else {
           chrome.storage.local.get('privateKey',
             function getPrivateKeyCallback(items) {
-              var privateKey = openpgp.key.readArmored(items.privateKey);
-              privateKey.keys[0].decrypt(__passphrase);
+              var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+              privateKey.decrypt(__passphrase);
 
               var pgpMessage = openpgp.message.readArmored(data.response);
               openpgp
-                .decryptMessage(privateKey.keys[0], pgpMessage)
+                .decrypt({
+                  message: pgpMessage,
+                  privateKey: privateKey,
+                })
                 .then(function onSuccess(plaintext) {
                   // success!
-                  done({secrets: JSON.parse(plaintext)});
+                  done({secrets: JSON.parse(plaintext.data)});
                 })
                 .catch(function onError(error) {
+                  console.error(error);
+
                   // something went wrong
                   done({
                     error: 400,
@@ -237,11 +247,12 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
                 // save an encrypted value of expireAt
                 var publicKey = items.publicKey;
                 openpgp
-                  .encryptMessage(
-                      openpgp.key.readArmored(publicKey).keys,
-                      '' + expireAt)
+                  .encrypt({
+                    data: '' + expireAt,
+                    publicKeys: openpgp.key.readArmored(publicKey).keys,
+                  })
                   .then(function sendPgpResponse(armored) {
-                    var pgpMessage = armored;
+                    var pgpMessage = armored.data;
                     chrome.storage.local.set({expireAt: pgpMessage});
 
                     // let passphrase self-expire
@@ -274,18 +285,21 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
               expired = true;
               done(expired);
             } else {
-              var privateKey = openpgp.key.readArmored(items.privateKey);
-              privateKey.keys[0].decrypt(__passphrase);
+              var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
+              privateKey.decrypt(__passphrase);
 
               // read an encrypted value of expireAt
               var pgpMessage = openpgp.message.readArmored(items.expireAt);
               openpgp
-                .decryptMessage(privateKey.keys[0], pgpMessage)
+                .decrypt({
+                  message: pgpMessage,
+                  privateKey: privateKey,
+                })
                 .then(function onSuccess(plaintext) {
                   // success!
                   var now = new Date().getTime();
                   try {
-                    var expireAt = parseInt(plaintext, 10);
+                    var expireAt = parseInt(plaintext.data, 10);
                     expired = expireAt < now;
                   } catch (e) {
                     expired = true;
@@ -294,6 +308,8 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
                   done(expired);
                 })
                 .catch(function onError(error) {
+                  console.error(error);
+
                   // something went wrong
                   expired = true;
                   done(expired);

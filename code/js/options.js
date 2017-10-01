@@ -97,8 +97,8 @@
 
       // generate keys and display data in form
       var options = {
+        userIds: [{'name': $('#key-name').val()}],
         numBits: 2048,
-        userId: $('#key-name').val(),
         passphrase: $('#passphrase').val()
       };
       msg.bg('generateKeys', options, function generateKeysCallback(keypair) {
