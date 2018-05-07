@@ -119,7 +119,22 @@ Password store initialized for AF3D26E5, 5AF8663E
 github.com/cpoppema: reencrypting to 088BAD9F22BD2048 15EF6677CC78CF01
 ```
 
-**Credits**
+**One-Time-Passwords/2FA/Two-Factor-Authentication**
+
+This plugin also supports generating tokens for your 2FA logins. To set this up. You can use this [pass plugin](https://github.com/tadfisher/pass-otp). Note that you're required to run pass >= 1.7.0 for the plugin to work.
+Once installed, the plugin can link two secrets together that have similar usernames, one that is your actual username and one special username with an `-otp` suffix.
+
+```
+ $    tree ~/.password-store | sed 's/├/\+/g; s/─/-/g; s/└/\\/g'
+/home/cornelis/.password-store
++-- github.com
+    +-- rcaldwell.gpg
+    \-- rcaldwell-otp.gpg
+```
+
+The plugin will show new buttons beside an indicator `2FA` for supported secrets to either `Fill`, `Copy` or `Show` the token. *Note*: only "Only Time-based One Time Passwords" (TOTP) are possible at this time, "HMAC-based One Time Password" (HOTP) are _not_ supported.
+
+## Credits
 
 * [salsita](https://github.com/salsita/chrome-extension-skeleton) for providing a chrome extension skeleton
 * [openpgpjs](https://github.com/openpgpjs/openpgpjs) for bringing openpgp to JavaScript in an easy-to-use way

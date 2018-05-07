@@ -63,11 +63,39 @@ body {
   width: 160px;
 }
 
-.fill-form {
+.secrets-list .list-group-item .token,
+.secrets-list .list-group-item .token-expiry,
+.secrets-list .list-group-item .token-copy,
+.secrets-list .list-group-item .token-show,
+.secrets-list .list-group-item .token-fill {
+  display: none;
+}
+
+.secrets-list .list-group-item.otp-enabled .token,
+.secrets-list .list-group-item.otp-enabled .token-expiry {
+  display: block;
+}
+
+.secrets-list .list-group-item.otp-enabled .token-copy,
+.secrets-list .list-group-item.otp-enabled .token-show,
+.secrets-list .list-group-item.otp-enabled .token-fill {
+  display: inline-block;
+}
+
+.secrets-list .list-group-item-text input.token,
+.secrets-list .list-group-item-text .token-expiry {
+  width: 130px;
+}
+
+
+.form-fill {
   margin-top: 2px;
 }
 
-.fill-form,
+.form-fill,
+.token-copy,
+.token-show,
+.token-fill,
 .username-copy,
 .password-show,
 .password-copy {

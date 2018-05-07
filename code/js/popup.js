@@ -3,11 +3,10 @@
 (function popup() {
   var parseDomain = require('parse-domain');
 
-  var $ = require('./libs/jquery');
+  var $ = require('jquery');
   window.$ = window.jQuery = $;
+  var msg;
   var progressJs = require('./libs/progress').progressJs;
-
-  var msg = require('./modules/msg').init('popup');
 
 
   function autofocus() {
@@ -25,8 +24,12 @@
     $('#logout').on('click', function onClick() {
       // kill progress
       if ($('#all-secrets[data-progressjs]').length) {
-        var progress = progressJs('#all-secrets');
-        progress.kill();
+        var secretsProgress = progressJs('#all-secrets');
+        secretsProgress.kill();
+      }
+      if ($('.token-expiry[data-progressjs]').length) {
+        var tokenProgress = progressJs('.token-expiry[data-progressjs]');
+        tokenProgress.kill();
       }
 
       // forget passphrase
@@ -120,7 +123,7 @@
     });
 
     // copy username and/or password into a form
-    $('.container').on('click', '.fill-form', function onClick(event) {
+    $('.container').on('click', '.form-fill', function onClick(event) {
       var secret = $(event.target).closest('.secret');
       var path = $(secret).data('path');
       var username = $(secret).data('username');
@@ -133,7 +136,7 @@
           msg.bg('fillForm', path, username,
             function fillFormCallback(data) {
               // remove any success or danger classes from other buttons
-              $('.fill-form').removeClass('label-success label-danger');
+              $('.form-fill').removeClass('label-success label-danger');
 
               if (data.error) {
                 $(event.target).removeClass('label-success');
@@ -142,6 +145,98 @@
                 showErrorNotification(data.error + ': ' + data.response);
               } else {
                 msg.bcast(tabId, ['ct'], 'fillForm', username, data.password);
+                $(event.target).removeClass('label-danger');
+                $(event.target).addClass('label-success');
+              }
+            });
+        });
+    });
+
+    // copy token
+    $('.container').on('click', '.token-copy', function onClick(event) {
+      var secret = $(event.target).closest('.secret');
+      var path = $(secret).data('path');
+      var username = $(secret).data('username');
+
+      msg.bg('copyToken', path, username,
+        function copyTokenCallback(data) {
+
+          if (data.error) {
+            stopTokenProgress();
+            $(event.target).removeClass('copied label-primary');
+            $(event.target).addClass('label-danger');
+
+            showErrorNotification(data.error + ': ' + data.response);
+          } else {
+            // remove existing 'copied' indicators
+            $('.copied').each(function forEachCopiedElem(i, elem) {
+              $(elem).text($(elem).data('reset-text'));
+              $(elem).removeClass('copied label-primary');
+            });
+            // indicate this token has been copied
+            $(event.target).text($(event.target).data('copied-text'));
+            $(event.target).removeClass('label-danger');
+            $(event.target).addClass('copied label-primary');
+          }
+        });
+    });
+
+    // show token
+    $('.container').on('click', '.token-show', function onClick(event) {
+      var secretTemplate = $($('#secrets-list-item-template').html());
+      var hiddenTokenText = secretTemplate.find('input.token').val();
+      var secret = $(event.target).closest('.secret');
+      var path = $(secret).data('path');
+      var username = $(secret).data('username');
+
+      msg.bg('showToken', path, username,
+        function showTokenCallback(data) {
+          // remove any success or danger classes from other buttons
+          $('.token-show').removeClass('label-success label-danger');
+
+          if (data.error) {
+            stopTokenProgress();
+
+            $(secret).find('.token').val(hiddenTokenText);
+            $(event.target).removeClass('label-success');
+            $(event.target).addClass('label-danger');
+
+            showErrorNotification(data.error + ': ' + data.response);
+          } else {
+            $(secret).find('.token').val(data.token);
+            $(event.target).removeClass('label-danger');
+            $(event.target).addClass('label-success');
+
+             tokenProgress($(secret).find('.token-expiry').get(0));
+          }
+        });
+    });
+
+    // copy token into a form
+    $('.container').on('click', '.token-fill', function onClick(event) {
+      var secret = $(event.target).closest('.secret');
+      var path = $(secret).data('path');
+      var username = $(secret).data('username');
+
+      // get currently visible tab id
+      chrome.tabs.query({active: true, currentWindow: true},
+        function queryTabsCallback(tabs) {
+          var tabId = tabs[0].id;
+
+          msg.bg('fillToken', path, username,
+            function fillFormCallback(data) {
+              // remove any success or danger classes from other buttons
+              $('.token-fill').removeClass('label-success label-danger');
+
+              stopTokenProgress();
+
+              if (data.error) {
+                $(event.target).removeClass('label-success');
+                $(event.target).addClass('label-danger');
+
+                showErrorNotification(data.error + ': ' + data.response);
+              } else {
+                msg.bcast(tabId, ['ct'], 'fillToken', data.token);
                 $(event.target).removeClass('label-danger');
                 $(event.target).addClass('label-success');
               }
@@ -360,10 +455,34 @@
 
     // loop through secrets and show progress if any
     if (secrets.length) {
+      // index secrets site/username, look for -otp secrets (one-time-password)
+      // used for Two-Factor-Authentication (2FA) and render them as such
+      var secretsIndex = {};
+      $.each(secrets, function forEachSecretIndex(i, secret) {
+        var key = secret.path + '/' + secret.username_normalized;
+        secretsIndex[key] = secret;
+      });
+
+      // now it's built, check every secret again to see if there's a
+      // non-otp secret to attach to
+      var shallowCopy = $.extend({}, secrets);
+      $.each(shallowCopy, function forEachSecretIndex(j, secret) {
+        var key_with_otp = secret.path + '/' + secret.username_normalized + '-otp';
+        if (secretsIndex[key_with_otp] !== undefined) {
+          secret.otp = true;
+          secrets.splice(secrets.indexOf(secretsIndex[key_with_otp]), 1);
+        }
+      });
+
       // add secrets to #all-secrets
       var secretTemplate = $($('#secrets-list-item-template').html());
       $.each(secrets, function forEachSecret(i, secret) {
         var template = secretTemplate.clone();
+
+        // if there's otp available, add class
+        if (secret.otp) {
+          template.addClass('otp-enabled');
+        }
 
         // add secret to list
         template.find('.domain').text(secret.domain)
@@ -547,6 +666,39 @@
     return progress;
   }
 
+  function stopTokenProgress(elem) {
+    // stop others
+    if ($('.token-expiry[data-progressjs]').length) {
+      if (!elem || $('.token-expiry[data-progressjs]').get(0) !== elem) {
+        var otherProgress = progressJs('.token-expiry[data-progressjs]');
+        otherProgress.kill();
+      }
+    }
+  }
+
+  function tokenProgress(elem) {
+    stopTokenProgress(elem);
+
+    // start this one
+    if ($('.token-expiry[data-progressjs]').get(0) !== elem) {
+      var progress = progressJs(elem);
+
+      var timeToNext30Seconds = (30 * 1000) - new Date().getTime() % (30 * 1000);
+      progress.start().set((timeToNext30Seconds + 1000) / (30 * 1000) * 100);
+
+      var timeToNextSecond = new Date().getTime() % 1000;
+      var update = function() {
+        if ($(elem).attr('data-progressjs')) {
+          timeToNext30Seconds = (30 * 1000) - new Date().getTime() % (30 * 1000);
+          progress.set((timeToNext30Seconds + 1000) / (30 * 1000) * 100);
+
+          setTimeout(update, 1000);
+        }
+      };
+      setTimeout(update, timeToNextSecond);
+    }
+  }
+
   $(function onDomReady() {
     bindLinksHandlers();
     bindSecretsListHandlers();
@@ -572,4 +724,37 @@
         }
       });
   });
+
+  var handlers = {
+    refreshTokenCopy: function refreshTokenCallback(path, token) {
+      var secret = $('.secret[data-path="' + path + '"]');
+
+      // if this token was copied, mark as red
+      var copyBtn = $(secret).find('.token-copy');
+      var copied = copyBtn.hasClass('copied');
+      if (copied) {
+        $(copyBtn).text($(copyBtn).data('reset-text'));
+        $(copyBtn).removeClass('copied label-primary');
+        $(copyBtn).addClass('label-danger');
+      }
+    },
+
+    refreshTokenShow: function refreshTokenCallback(path, token) {
+      var secret = $('.secret[data-path="' + path + '"]');
+
+      // show token
+      $(secret).find('.token').val(token);
+
+      // if this token was copied, mark as red
+      var copyBtn = $(secret).find('.token-copy');
+      var copied = copyBtn.hasClass('copied');
+      if (copied) {
+        $(copyBtn).text($(copyBtn).data('reset-text'));
+        $(copyBtn).removeClass('copied label-primary');
+        $(copyBtn).addClass('label-danger');
+      }
+    },
+  };
+
+  msg = require('./modules/msg').init('popup', handlers);
 })();
