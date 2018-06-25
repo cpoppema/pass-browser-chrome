@@ -7,6 +7,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
 
 (function background() {
   var openpgp = require('openpgp');
+  var otplib = require('otplib');
 
   var server = require('./server');
 
@@ -14,7 +15,10 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   // when the popup hides or the timeout expires when the popup is hidden
   var __passphrase = null;
   var handlers;
+  var msg;
   var popupIsOpen = false;
+  var refreshTokenTimeout;
+  var showTokenForPath = null;
 
   /**
    * Helper function to copy text to clipboard.
@@ -76,6 +80,38 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   }
 
   /**
+   * Obtain token generator function.
+   */
+  function getTokenGenerator(path, username, done) {
+    clearTimeout(refreshTokenTimeout);
+
+    // add -otp suffix as per our specs
+    username += '-otp';
+
+    getPassword(path, username, function getPasswordCallback(result) {
+      if (!result.error) {
+        var url = new URL(result.password);
+        if (url.pathname.substring(0, 6) === '//totp' && url.searchParams.get('secret')) {
+          var secret = url.searchParams.get('secret');
+          result.generate = function generateToken() {
+            return otplib.authenticator.generate(secret);
+          };
+        } else if (url.pathname.substring(0, 6) === '//hotp') {
+          result.error = 'Could not generate token';
+          result.response = 'Sorry, HMAC-based One Time Password (HOTP) is not supported!';
+        } else {
+          result.error = 'Failed to read OTP secret';
+          result.response = 'Reason unknown';
+        }
+
+        // clear
+        result.password = null;
+      }
+      done(result);
+    });
+  }
+
+  /**
    * Helper function to reset __passphrase and lock icon if timeout expired.
    */
   function testPassphraseIsExpiredCallBack(expired) {
@@ -108,6 +144,41 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       done();
     },
 
+    copyToken: function copyToken(path, username, done) {
+      getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
+        if (!result.error) {
+          // copy
+          var lastToken = result.generate();
+          copyToClipboard(lastToken);
+
+          // refresh token as long as the popup is open
+          refreshTokenTimeout = setTimeout(function refreshTokenCopy() {
+            var newToken = result.generate();
+            if (newToken !== lastToken) {
+              lastToken = newToken;
+
+              // when copying for last shown token, update visible token too
+              if (showTokenForPath === path) {
+                msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
+              }
+              msg.cmd(['popup'], 'refreshTokenCopy', path, lastToken);
+            }
+
+            if (popupIsOpen) {
+              refreshTokenTimeout = setTimeout(refreshTokenCopy, 1000);
+            } else {
+              // clear
+              result.generate = null;
+            }
+          }, 1000);
+
+          done({token: lastToken});
+        } else {
+          done(result);
+        }
+      });
+    },
+
     copyPassword: function copyPassword(path, username, done) {
       getPassword(path, username, function getPasswordCallback(result) {
         if (!result.error) {
@@ -127,9 +198,20 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       });
     },
 
+    fillToken: function fillToken(path, username, done) {
+      getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
+        if (!result.error) {
+          done({token: result.generate()});
+        } else {
+          done(result);
+        }
+      });
+    },
+
     forceLogout: function forceLogout() {
       handlers.setLockIcon();
       __passphrase = null;
+      showTokenForPath = null;
       chrome.storage.local.set({expireAt: null});
     },
 
@@ -203,6 +285,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       // this works regardless of the timeout setting
       if (context === 'popup') {
         popupIsOpen = false;
+        showTokenForPath = null;
         handlers.testPassphraseIsExpired(testPassphraseIsExpiredCallBack);
       }
     },
@@ -221,6 +304,36 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
 
     showPassword: function showPassword(path, username, done) {
       getPassword(path, username, done);
+    },
+
+    showToken: function showToken(path, username, done) {
+      showTokenForPath = path;
+
+      getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
+        if (!result.error) {
+          var lastToken = result.generate();
+
+          // refresh token as long as the popup is open
+          refreshTokenTimeout = setTimeout(function refreshTokenShow() {
+            var newToken = result.generate();
+            if (newToken !== lastToken) {
+              lastToken = newToken;
+              msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
+            }
+
+            if (popupIsOpen) {
+              refreshTokenTimeout = setTimeout(refreshTokenShow, 1000);
+            } else {
+              // clear
+              result.generate = null;
+            }
+          }, 1000);
+
+          done({token: lastToken});
+        } else {
+          done(result);
+        }
+      });
     },
 
     testPassphrase: function testPassphrase(passphrase, done) {
@@ -320,7 +433,7 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     }
   };
 
-  require('./modules/msg').init('bg', handlers);
+  msg = require('./modules/msg').init('bg', handlers);
 
   // on load (also when the browser starts)
   handlers.testPassphraseIsExpired(testPassphraseIsExpiredCallBack);

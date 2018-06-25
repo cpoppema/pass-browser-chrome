@@ -1,7 +1,7 @@
 'use strict';
 
 (function options() {
-  var $ = require('./libs/jquery');
+  var $ = require('jquery');
 
   var msg = require('./modules/msg').init('options');
 

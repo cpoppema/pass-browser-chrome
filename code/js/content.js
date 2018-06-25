@@ -10,7 +10,7 @@ function debug() {
 }
 
 (function content() {
-  var $ = require('./libs/jquery');
+  var $ = require('jquery');
 
   var formSelector = 'form';
   var usernameFieldSelector = ['[type="email"]:visible',
@@ -19,6 +19,12 @@ function debug() {
                                '[type="textbox"]',
                               ].join(',');
   var passwordFieldSelector = '[type="password"]';
+  var tokenFieldSelector = ['[type="text"]:visible',
+                            '[type="number"]:visible',
+                            '[type="password"]:visible',
+                            'input:not([type]):visible',
+                            '[type="textbox"]',
+                           ].join(',');
 
 
   /**
@@ -205,6 +211,30 @@ function debug() {
   }
 
   /**
+   * Helper function to find a token field.
+   */
+  function findTokenField(container) {
+    var tokenField;
+
+    // in case the page has autofocus, or the user selected an input already,
+    // use this element if it matches tokenFieldSelector
+    if ($(document.activeElement).is(tokenFieldSelector)) {
+      return document.activeElement;
+    }
+
+    // no selected element: fallback to finding a password field ourselves
+    tokenField = $(container).find(tokenFieldSelector);
+    if ($(tokenField).length === 1) {
+      return tokenField.get(0);
+    } else if ($(tokenField).length > 1) {
+      // multiple fields found, maybe there is only one visible
+      if ($(tokenField).filter(':visible').length === 1) {
+        return tokenField.filter(':visible').get(0);
+      }
+    }
+  }
+
+  /**
    * Helper function to trigger events that the site might listen to, this can
    * help removing custom placeholders for example.
    */
@@ -238,6 +268,22 @@ function debug() {
         triggerChange($(passwordField).get(0));
       } else {
         debug('no field found for password in container:', container);
+      }
+    },
+
+    fillToken: function fillToken(token) {
+      var container = findForm();
+      if (container === null) {
+        container = document.body;
+      }
+
+      var tokenField = findTokenField(container);
+
+      if (tokenField) {
+        $(tokenField).val(token);
+        triggerChange($(tokenField).get(0));
+      } else {
+        debug('no field found for token in container:', container);
       }
     },
   };
