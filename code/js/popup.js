@@ -552,7 +552,7 @@
 
               restoreLastQuery();
             }
-          }, i * 25);
+          }, i * (Math.max(5, 500 / secrets.length)));
         });
       });
     } else {
