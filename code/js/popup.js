@@ -1,6 +1,7 @@
 'use strict';
 
 (function popup() {
+  var matchSorter = require('match-sorter').default;
   var parseDomain = require('parse-domain');
 
   var $ = require('jquery');
@@ -282,22 +283,65 @@
 
   function filterSecrets(query) {
     if (query) {
-      // filter list
+      var all_secrets = [];
+      var ranked_secrets_objs;
+
+      // build objs for secrets
       $('#all-secrets .secret').each(function forEachSecretElem(i, secretElem) {
-        var domain = $(secretElem).attr('data-domain');
-        var username = $(secretElem).attr('data-username');
-        var usernameNormalized = $(secretElem).attr('data-username-normalized');
-        if (fuzzyContains(domain, query) ||
-            fuzzyContains(username, query) ||
-            fuzzyContains(usernameNormalized, query)) {
+        var domain = secretElem.getAttribute('data-domain');
+        var username = secretElem.getAttribute('data-username');
+        var usernameNormalized = secretElem.getAttribute('data-username-normalized');
+        var secret = {
+          'domain': domain,
+          'username': username,
+          'usernameNormalized': usernameNormalized,
+        };
+        $(secretElem).data('secret', secret);
+        all_secrets.push(secret);
+      });
+
+      // rank secret objs
+      ranked_secrets_objs = matchSorter(all_secrets, query, {
+        keys: [
+          'domain',
+          'usernameNormalized',
+          'username',
+        ],
+      });
+
+      // give every html element its ranking
+      $('#all-secrets .secret').each(function forEachSecretElem(i, secretElem) {
+        var domain = secretElem.getAttribute('data-domain');
+        var username = secretElem.getAttribute('data-username');
+        var usernameNormalized = secretElem.getAttribute('data-username-normalized');
+        var secret = $(secretElem).data('secret');
+        $(secretElem).data('ranked-position', ranked_secrets_objs.indexOf(secret));
+      });
+
+      // order html elements by ranking
+      $('#all-secrets .secret').detach().sort(function compareSecretElem(a, b) {
+        return $(a).data('ranked-position') - $(b).data('ranked-position');
+
+      }).appendTo($('#all-secrets'));
+
+      // show/hide matches
+      $('#all-secrets .secret').detach().each(function forEachSecretElem(i, secretElem) {
+        if ($(secretElem).data('ranked-position') !== -1) {
           $(secretElem).show();
         } else {
           $(secretElem).hide();
         }
-      });
+      }).appendTo($('#all-secrets'));
     } else {
+      // re-sort based on data-original-order
+      $('#all-secrets .secret').detach().sort(function compareSecretElem(a, b) {
+        return $(a).data('original-order') - $(b).data('original-order');
+      }).appendTo($('#all-secrets'));
+
       // show all
-      $('.secret').show();
+      $('#all-secrets .secret').detach().each(function forEachSecretElem(i, secretElem) {
+        $(secretElem).show();
+      }).appendTo($('#all-secrets'));
     }
   }
 
@@ -369,20 +413,6 @@
 
         done();
       });
-  }
-
-  function fuzzyContains(hay, needle) {
-    hay = hay.toLowerCase();
-    needle = needle.toLowerCase();
-
-    var lastIndex = -1;
-    for (var i = 0; i < needle.length; i++) {
-      var l = needle[i];
-      if ((lastIndex = hay.indexOf(l, lastIndex + 1)) === -1) {
-        return false;
-      }
-    }
-    return true;
   }
 
   function getSecrets() {
@@ -494,6 +524,7 @@
           .attr('data-path', secret.path)
           .attr('data-username-normalized', secret.username_normalized)
           .attr('data-username', secret.username)
+          .attr('data-original-order', i)
           // do not display initially
           .css('display', 'none');  // .hide() won't work yet
         template.appendTo($('#all-secrets'));
