@@ -3,7 +3,7 @@
   "license": "GNU GPL v3.0",
   "description": "Make secrets easily accessible from your pass' ~/.password-store",
   "author": "Cornelis Poppema",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "engines": {
     "node": ">= 8.2.1"
   },
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "browserify": "^16.2.0",
-    "grunt": "^1.0.1",
+    "grunt": "^1.0.4",
     "grunt-browserify": "^5.2.0",
     "grunt-contrib-clean": "^1.1.0",
     "grunt-contrib-copy": "^1.0.0",
