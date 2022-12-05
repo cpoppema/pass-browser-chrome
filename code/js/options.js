@@ -97,13 +97,15 @@
 
       // generate keys and display data in form
       var options = {
-        userIds: [{'name': $('#key-name').val()}],
-        numBits: 2048,
+        type: 'rsa',
+        userIDs: [{'name': $('#key-name').val()}],
+        rsaBits: 2048,
         passphrase: $('#passphrase').val()
       };
-      msg.bg('generateKeys', options, function generateKeysCallback(keypair) {
-        keyPair.publicKey = keypair.publicKeyArmored;
-        keyPair.privateKey = keypair.privateKeyArmored;
+      msg.bg('generateKeys', options, function generateKeysCallback(keys) {
+        var { privateKey, publicKey } = keys;
+        keyPair.privateKey = privateKey;
+        keyPair.publicKey = publicKey;
 
         $('#public-key').val(keyPair.publicKey);
 

@@ -22,5 +22,6 @@
   },
   "predef": [
     "chrome"
-  ]
+  ],
+  "esversion": "8"
 }

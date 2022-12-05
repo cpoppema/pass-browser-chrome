@@ -1,14 +1,15 @@
 'use strict';
 
-// hide notifications on click
-chrome.notifications.onClicked.addListener(function callback(notificationId) {
-  chrome.notifications.clear(notificationId);
-});
+import * as openpgp from 'openpgp/lightweight';
 
-(function background() {
-  var openpgp = require('openpgp');
-  var otplib = require('otplib');
+// protection against EFAIL, incompatible with current version of pass-server-node
+// https://github.com/openpgpjs/openpgpjs/discussions/1418
+// https://docs.openpgpjs.org/module-config.html#.allowUnauthenticatedMessages
+openpgp.config.allowUnauthenticatedMessages = true;
 
+var otplib = require('otplib');
+
+(async function background() {
   var server = require('./server');
 
   // remember the passphrase to get secrets while in the popup, this is cleared
@@ -19,6 +20,19 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
   var popupIsOpen = false;
   var refreshTokenTimeout;
   var showTokenForPath = null;
+
+  // hide notifications on click
+  chrome.notifications.onClicked.addListener(function callback(notificationId) {
+    chrome.notifications.clear(notificationId);
+  });
+
+  // clear passphrase after timeout
+  chrome.alarms.onAlarm.addListener(function clearPassphraseAlarm(alarm) {
+    if (alarm.name === 'testPassphraseIsExpired') {
+      var cb = testPassphraseIsExpiredCallBack;
+      handlers.testPassphraseIsExpired(cb);
+    }
+  });
 
   /**
    * Helper function to copy text to clipboard.
@@ -42,15 +56,17 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
         done(data);
       } else {
         chrome.storage.local.get('privateKey',
-          function getPrivateKeyCallback(items) {
-            var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-            privateKey.decrypt(__passphrase);
+          async function getPrivateKeyCallback(items) {
+            var privateKey = await openpgp.decryptKey({
+                privateKey: await openpgp.readPrivateKey({ armoredKey: items.privateKey }),
+                passphrase: __passphrase
+            });
 
-            var pgpMessage = openpgp.message.readArmored(data.response);
-            openpgp
+            var pgpMessage = await openpgp.readMessage({ armoredMessage: data.response });
+            await openpgp
               .decrypt({
                 message: pgpMessage,
-                privateKey: privateKey,
+                decryptionKeys: privateKey
               })
               .then(function onSuccess(plaintext) {
                 // success!
@@ -138,59 +154,59 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     });
 
   handlers = {
-    copyUsername: function copyUsername(username, done) {
-      copyToClipboard(username);
+    // copyUsername: function copyUsername(username, done) {
+    //   copyToClipboard(username);
 
-      done();
-    },
+    //   done();
+    // },
 
-    copyToken: function copyToken(path, username, done) {
-      getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
-        if (!result.error) {
-          // copy
-          var lastToken = result.generate();
-          copyToClipboard(lastToken);
+    // copyToken: function copyToken(path, username, done) {
+    //   getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
+    //     if (!result.error) {
+    //       // copy
+    //       var lastToken = result.generate();
+    //       copyToClipboard(lastToken);
 
-          // refresh token as long as the popup is open
-          refreshTokenTimeout = setTimeout(function refreshTokenCopy() {
-            var newToken = result.generate();
-            if (newToken !== lastToken) {
-              lastToken = newToken;
+    //       // refresh token as long as the popup is open
+    //       refreshTokenTimeout = setTimeout(function refreshTokenCopy() {
+    //         var newToken = result.generate();
+    //         if (newToken !== lastToken) {
+    //           lastToken = newToken;
 
-              // when copying for last shown token, update visible token too
-              if (showTokenForPath === path) {
-                msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
-              }
-              msg.cmd(['popup'], 'refreshTokenCopy', path, lastToken);
-            }
+    //           // when copying for last shown token, update visible token too
+    //           if (showTokenForPath === path) {
+    //             msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
+    //           }
+    //           msg.cmd(['popup'], 'refreshTokenCopy', path, lastToken);
+    //         }
 
-            if (popupIsOpen) {
-              refreshTokenTimeout = setTimeout(refreshTokenCopy, 1000);
-            } else {
-              // clear
-              result.generate = null;
-            }
-          }, 1000);
+    //         if (popupIsOpen) {
+    //           refreshTokenTimeout = setTimeout(refreshTokenCopy, 1000);
+    //         } else {
+    //           // clear
+    //           result.generate = null;
+    //         }
+    //       }, 1000);
 
-          done({token: lastToken});
-        } else {
-          done(result);
-        }
-      });
-    },
+    //       done({token: lastToken});
+    //     } else {
+    //       done(result);
+    //     }
+    //   });
+    // },
 
-    copyPassword: function copyPassword(path, username, done) {
-      getPassword(path, username, function getPasswordCallback(result) {
-        if (!result.error) {
-          // copy
-          copyToClipboard(result.password);
+    // copyPassword: function copyPassword(path, username, done) {
+    //   getPassword(path, username, function getPasswordCallback(result) {
+    //     if (!result.error) {
+    //       // copy
+    //       copyToClipboard(result.password);
 
-          // clear
-          result.password = null;
-        }
-        done(result);
-      });
-    },
+    //       // clear
+    //       result.password = null;
+    //     }
+    //     done(result);
+    //   });
+    // },
 
     fillForm: function fillForm(path, username, done) {
       getPassword(path, username, function getPasswordCallback(result) {
@@ -215,13 +231,17 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       chrome.storage.local.set({expireAt: null});
     },
 
-    generateKeys: function generateKeys(options, done) {
-      openpgp.generateKey(options).then(done);
+    generateKeys: async function generateKeys(options, done) {
+      var { privateKey, publicKey } = await openpgp.generateKey(options);
+      done({
+        privateKey: privateKey,
+        publicKey: publicKey
+      });
     },
 
-    getIdForKey: function getIdForKey(key, done) {
-      var publicKey = openpgp.key.readArmored(key).keys[0];
-      var keyId = publicKey.primaryKey.getKeyId().toHex().toUpperCase();
+    getIdForKey: async function getIdForKey(key, done) {
+      var publicKey = await openpgp.readKey({ armoredKey: key });
+      var keyId = publicKey.keyPacket.keyID.toHex().toUpperCase();
       done(keyId);
     },
 
@@ -231,15 +251,17 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
           done(data);
         } else {
           chrome.storage.local.get('privateKey',
-            function getPrivateKeyCallback(items) {
-              var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-              privateKey.decrypt(__passphrase);
+            async function getPrivateKeyCallback(items) {
+              var privateKey = await openpgp.decryptKey({
+                  privateKey: await openpgp.readPrivateKey({ armoredKey: items.privateKey }),
+                  passphrase: __passphrase
+              });
 
-              var pgpMessage = openpgp.message.readArmored(data.response);
-              openpgp
+              var pgpMessage = await openpgp.readMessage({ armoredMessage: data.response });
+              await openpgp
                 .decrypt({
                   message: pgpMessage,
-                  privateKey: privateKey,
+                  decryptionKeys: privateKey
                 })
                 .then(function onSuccess(plaintext) {
                   // success!
@@ -261,9 +283,9 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       server.getSecrets(getSecretsCallback);
     },
 
-    getUserIdForKey: function getUserIdForKey(key, done) {
-      var publicKey = openpgp.key.readArmored(key).keys[0];
-      var userId = publicKey.users[0].userId.userid;
+    getUserIdForKey: async function getUserIdForKey(key, done) {
+      var publicKey = await openpgp.readKey({ armoredKey: key });
+      var userId = publicKey.users[0].userID.userID;
       done(userId);
     },
 
@@ -291,13 +313,13 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     },
 
     setLockIcon: function setLockIcon() {
-      chrome.browserAction.setIcon({
+      chrome.action.setIcon({
         path: chrome.runtime.getURL('images/icon-locked-128.png')
       });
     },
 
     setUnlockIcon: function setUnlockIcon() {
-      chrome.browserAction.setIcon({
+      chrome.action.setIcon({
         path: chrome.runtime.getURL('images/icon-unlocked-128.png')
       });
     },
@@ -306,8 +328,10 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
       getPassword(path, username, done);
     },
 
-    showToken: function showToken(path, username, done) {
-      showTokenForPath = path;
+    showToken: function showToken(path, username, copy, done) {
+      if (!copy) {
+        showTokenForPath = path;
+      }
 
       getTokenGenerator(path, username, function getTokenGeneratorCallback(result) {
         if (!result.error) {
@@ -318,7 +342,13 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
             var newToken = result.generate();
             if (newToken !== lastToken) {
               lastToken = newToken;
-              msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
+              if (copy) {
+                msg.cmd(['popup'], 'refreshTokenCopy', path, lastToken);
+              }
+              // when copying for last shown token, update visible token too
+              if (!copy || showTokenForPath === path) {
+                msg.cmd(['popup'], 'refreshTokenShow', path, lastToken);
+              }
             }
 
             if (popupIsOpen) {
@@ -339,74 +369,79 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
     testPassphrase: function testPassphrase(passphrase, done) {
       // test passphrase with private key
       chrome.storage.local.get(['privateKey', 'timeout', 'publicKey'],
-        function getPrivateKeyCallback(items) {
-          var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-          if (typeof privateKey === typeof void 0) {
+        async function getPrivateKeyCallback(items) {
+          if (!items.privateKey) {
             done(null);
-          } else {
-            var unlocked = privateKey.decrypt(passphrase);
+          }
 
-            if (unlocked === true) {
-              // at least remember passhrase while popup is visible
-              __passphrase = passphrase;
+          try {
+            var privateKey = await openpgp.decryptKey({
+                privateKey: await openpgp.readPrivateKey({armoredKey: items.privateKey}),
+                passphrase: passphrase
+            });
 
-              if (items.timeout) {
-                // set expiration time for passphrase, this will be checked
-                // the next time the popup is opened
-                var now = new Date().getTime();
-                var timeout = items.timeout * 1000; // convert to ms
-                var expireAt = now + timeout;
+            // at least remember passhrase while popup is visible
+            __passphrase = passphrase;
 
-                // save an encrypted value of expireAt
-                var publicKey = items.publicKey;
-                openpgp
-                  .encrypt({
-                    data: '' + expireAt,
-                    publicKeys: openpgp.key.readArmored(publicKey).keys,
-                  })
-                  .then(function sendPgpResponse(armored) {
-                    var pgpMessage = armored.data;
-                    chrome.storage.local.set({expireAt: pgpMessage});
+            if (items.timeout) {
+              // set expiration time for passphrase, this will be checked
+              // the next time the popup is opened
+              var now = new Date().getTime();
+              var timeout = parseInt(items.timeout, 10) * 1000; // convert to ms
+              var expireAt = now + timeout;
 
-                    // let passphrase self-expire
-                    setTimeout(function testPassphraseIsExpiredTimeout() {
-                      var cb = testPassphraseIsExpiredCallBack;
-                      handlers.testPassphraseIsExpired(cb);
-                    }, timeout);
+              // save an encrypted value of expireAt
+              await openpgp
+                .encrypt({
+                  message: await openpgp.createMessage({ text: '' + expireAt }),
+                  encryptionKeys: await openpgp.readKey({ armoredKey: items.publicKey }),
+                })
+                .then(function sendPgpResponse(armored) {
+                  var pgpMessage = armored;
+                  chrome.storage.local.set({expireAt: pgpMessage});
 
-                    done(unlocked);
-                  });
-              } else {
-                done(unlocked);
-              }
+                  // let passphrase self-expire
+                  chrome.alarms.clearAll();
+                  chrome.alarms.create(
+                    'testPassphraseIsExpired',
+                    {
+                      delayInMinutes: Math.max(timeout / 1000 / 60, 1)
+                    }
+                  );
+                  done(true);
+                });
             } else {
-              done(unlocked);
+              // TBD: is this needed
+              chrome.alarms.clearAll();
             }
+          } catch (e) {
+            done(false);
           }
         });
     },
 
     testPassphraseIsExpired: function testPassphraseIsExpired(done) {
       var expired;
-
       if (__passphrase === null) {
         done(true);
       } else {
         chrome.storage.local.get(['timeout', 'expireAt', 'privateKey'],
-          function getTimeoutCallback(items) {
+          async function getTimeoutCallback(items) {
             if (!items.expireAt || !items.timeout) {
               expired = true;
               done(expired);
             } else {
-              var privateKey = openpgp.key.readArmored(items.privateKey).keys[0];
-              privateKey.decrypt(__passphrase);
+              var privateKey = await openpgp.decryptKey({
+                  privateKey: await openpgp.readPrivateKey({ armoredKey: items.privateKey }),
+                  passphrase: __passphrase
+              });
 
               // read an encrypted value of expireAt
-              var pgpMessage = openpgp.message.readArmored(items.expireAt);
-              openpgp
+              var pgpMessage = await openpgp.readMessage({ armoredMessage: items.expireAt });
+              await openpgp
                 .decrypt({
                   message: pgpMessage,
-                  privateKey: privateKey,
+                  decryptionKeys: privateKey
                 })
                 .then(function onSuccess(plaintext) {
                   // success!
@@ -421,8 +456,6 @@ chrome.notifications.onClicked.addListener(function callback(notificationId) {
                   done(expired);
                 })
                 .catch(function onError(error) {
-                  console.error(error);
-
                   // something went wrong
                   expired = true;
                   done(expired);
