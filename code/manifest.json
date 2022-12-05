@@ -22,7 +22,6 @@
         }
     ],
     "permissions": [
-        "<all_urls>",
         "alarms",
         "clipboardWrite",
         "notifications",
