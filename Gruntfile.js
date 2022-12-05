@@ -56,10 +56,15 @@ module.exports = function(grunt) {
     browserify: {
       build: {
         files: fileMaps.browserify,
-        options: { browserifyOptions: {
-          debug: true,  // for source maps
-          standalone: pkg['export-symbol']
-        } }
+        options: {
+          plugin: [
+            [ require('esmify') ]
+          ],
+          browserifyOptions: {
+            debug: true,  // for source maps
+            standalone: pkg['export-symbol']
+          }
+        }
       }
     },
 

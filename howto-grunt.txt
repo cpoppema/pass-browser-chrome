@@ -1,0 +1,14 @@
+$ node -v
+v4.3.2
+$ npm -v
+2.14.12
+$ unzip pass-browser-0.6.4.xpi -d /tmp/pass-browser-0.6.4.xpi-unzipped
+$ unzip sources.zip -d /tmp/pass-browser-0.6.4.xpi-src
+$ cd /tmp/pass-browser-0.6.4.xpi-src
+$ npm cache clean
+$ npm install
+$ openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt > mykey.pem
+$ grunt
+$ cd -
+$ diff -r /tmp/pass-browser-0.6.4.xpi-unzipped /tmp/pass-browser-0.6.4.xpi-src/build/unpacked-prod
+Only in /tmp/pass-browser-0.6.4.xpi-unzipped: web-ext-artifacts

@@ -9,43 +9,12 @@
       var server = items.server;
       var uri = server + path;
 
-      function handler() {
-        if (this.responseText !== null &&
-            this.getResponseHeader('content-type') === 'application/json'
-        ) {
-          // response parsed, it might still contain an error
-          var response = JSON.parse(this.responseText);
-          if (response.error) {
-            done({
-              error: this.status,
-              response: response.error
-            });
-          } else {
-            done(response);
-          }
-        } else {
-          // unknown error, simply pass status code and status text
-          done({
-            error: this.status,
-            response: this.statusText
-          });
-        }
-      }
-
-      var client = new XMLHttpRequest();
-      client.onload = handler;
-      client.open('POST', uri);
-      client.setRequestHeader('Content-Type', 'application/json');
-      client.timeout = 5000;
-
       function noServerError() {
         done({
           error: 404,
           response: 'Server did not respond or timed out.'
         });
       }
-      client.ontimeout = noServerError;
-      client.onerror = noServerError;
 
       var payload = {publicKey: publicKey};
       for (var key in data) {
@@ -53,7 +22,39 @@
           payload[key] = data[key];
         }
       }
-      client.send(JSON.stringify(payload));
+      fetch(uri, { headers: { 'content-type': 'application/json' }, method: 'POST', body: JSON.stringify(payload) })
+        .then(function received(response) {
+          if (!response.ok) {
+            noServerError();
+          } else {
+            var isJsonResponse = false;
+            for (var header of response.headers) {
+              if (header[0] === 'content-type' && header[1].slice(0, 16) === 'application/json') {
+                isJsonResponse = true;
+                break;
+              }
+            }
+
+            if (isJsonResponse) {
+              response.json().then(function parsedJsonResponse(json) {
+                if (json.error) {
+                  done({
+                    error: response.status,
+                    response: json.error,
+                  });
+                } else {
+                  done(json);
+                }
+              });
+            } else {
+              done({
+                error: response.status,
+                response: response.statusText
+              });
+            }
+          }
+        })
+        .catch(noServerError);
     }
     chrome.storage.local.get(['server', 'publicKey'], getItemsCallback);
   }

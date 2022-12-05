@@ -59,44 +59,74 @@
     $('.container').on('click', '.username-copy', function onClick(event) {
       var username = $(event.target).closest('.secret').find('.username');
 
-      msg.bg('copyUsername', username.val(),
-        function copyUsernameCallback() {
-          // remove existing 'copied' indicators
-          $('.copied').each(function forEachCopiedElem(i, elem) {
-            $(elem).text($(elem).data('reset-text'));
-            $(elem).removeClass('copied label-primary');
-          });
-          // indicate this username has been copied
-          $(event.target).text($(event.target).data('copied-text'));
-          $(event.target).addClass('copied label-primary');
-        });
+      copyToClipboard(username);
+
+      // remove existing 'copied' indicators
+      $('.copied').each(function forEachCopiedElem(i, elem) {
+        $(elem).text($(elem).data('reset-text'));
+        $(elem).removeClass('copied label-primary');
+      });
+      // indicate this username has been copied
+      $(event.target).text($(event.target).data('copied-text'));
+      $(event.target).addClass('copied label-primary');
     });
 
     // copy password
     $('.container').on('click', '.password-copy', function onClick(event) {
       var secret = $(event.target).closest('.secret');
-      var path = $(secret).data('path');
-      var username = $(secret).data('username');
+      var password = $(secret).find('.password');
 
-      msg.bg('copyPassword', path, username,
-        function copyPasswordCallback(data) {
-          if (data.error) {
-            $(event.target).removeClass('copied label-primary');
-            $(event.target).addClass('label-danger');
+      // copy-to-clipboard doesn't work from a service worker (yet)
+      // so:
+      // - copy an already shown password, or..
+      // - fetch it, show it, copy it, hide it
+      if ($(secret).find('.password-show').hasClass('label-success')) {
+        copyToClipboard(password);
 
-            showErrorNotification(data.error + ': ' + data.response);
-          } else {
-            // remove existing 'copied' indicators
-            $('.copied').each(function forEachCopiedElem(i, elem) {
-              $(elem).text($(elem).data('reset-text'));
-              $(elem).removeClass('copied label-primary');
-            });
-            // indicate this password has been copied
-            $(event.target).text($(event.target).data('copied-text'));
-            $(event.target).removeClass('label-danger');
-            $(event.target).addClass('copied label-primary');
-          }
+        // remove existing 'copied' indicators
+        $('.copied').each(function forEachCopiedElem(i, elem) {
+          $(elem).text($(elem).data('reset-text'));
+          $(elem).removeClass('copied label-primary');
         });
+        // indicate this password has been copied
+        $(event.target).text($(event.target).data('copied-text'));
+        $(event.target).removeClass('label-danger');
+        $(event.target).addClass('copied label-primary');
+      } else {
+        var secretTemplate = $($('#secrets-list-item-template').html());
+        var hiddenPasswordText = secretTemplate.find('input.password').val();
+        var path = $(secret).data('path');
+        var username = $(secret).data('username');
+
+        msg.bg('showPassword', path, username,
+          function showPasswordCallback(data) {
+            if (data.error) {
+              $(password).val(hiddenPasswordText);
+              $(event.target).removeClass('copied label-primary');
+              $(event.target).addClass('label-danger');
+
+              showErrorNotification(data.error + ': ' + data.response);
+            } else {
+              // show it
+              $(password).val(data.password);
+              $(event.target).removeClass('label-danger');
+              // copy it
+              copyToClipboard(password);
+              // hide it
+              $(password).val(hiddenPasswordText);
+
+              // remove existing 'copied' indicators
+              $('.copied').each(function forEachCopiedElem(i, elem) {
+                $(elem).text($(elem).data('reset-text'));
+                $(elem).removeClass('copied label-primary');
+              });
+              // indicate this password has been copied
+              $(event.target).text($(event.target).data('copied-text'));
+              $(event.target).removeClass('label-danger');
+              $(event.target).addClass('copied label-primary');
+            }
+          });
+      }
     });
 
     // show password
@@ -104,19 +134,20 @@
       var secretTemplate = $($('#secrets-list-item-template').html());
       var hiddenPasswordText = secretTemplate.find('input.password').val();
       var secret = $(event.target).closest('.secret');
+      var password = $(secret).find('.password');
       var path = $(secret).data('path');
       var username = $(secret).data('username');
 
       msg.bg('showPassword', path, username,
         function showPasswordCallback(data) {
           if (data.error) {
-            $(secret).find('.password').val(hiddenPasswordText);
+            $(password).val(hiddenPasswordText);
             $(event.target).removeClass('label-success');
             $(event.target).addClass('label-danger');
 
             showErrorNotification(data.error + ': ' + data.response);
           } else {
-            $(secret).find('.password').val(data.password);
+            $(password).val(data.password);
             $(event.target).removeClass('label-danger');
             $(event.target).addClass('label-success');
           }
@@ -156,12 +187,19 @@
     // copy token
     $('.container').on('click', '.token-copy', function onClick(event) {
       var secret = $(event.target).closest('.secret');
+      var token = $(secret).find('.token');
+
+      // copy-to-clipboard doesn't work from a service worker (yet)
+      // so:
+      // - always fetch it, show it, copy it, hide it
+      var secretTemplate = $($('#secrets-list-item-template').html());
+      var hiddenTokenText = secretTemplate.find('input.token').val();
       var path = $(secret).data('path');
       var username = $(secret).data('username');
 
-      msg.bg('copyToken', path, username,
-        function copyTokenCallback(data) {
-
+      var copy = !$(secret).find('.token-show').hasClass('label-success');
+      msg.bg('showToken', path, username, copy,
+        function showTokenCallback(data) {
           if (data.error) {
             stopTokenProgress();
             $(event.target).removeClass('copied label-primary');
@@ -169,6 +207,16 @@
 
             showErrorNotification(data.error + ': ' + data.response);
           } else {
+            // show it
+            $(token).val(data.token);
+            $(event.target).removeClass('label-danger');
+            // copy it
+            copyToClipboard(token);
+            if (copy) {
+              // hide it
+              $(token).val(hiddenTokenText);
+            }
+
             // remove existing 'copied' indicators
             $('.copied').each(function forEachCopiedElem(i, elem) {
               $(elem).text($(elem).data('reset-text'));
@@ -190,7 +238,8 @@
       var path = $(secret).data('path');
       var username = $(secret).data('username');
 
-      msg.bg('showToken', path, username,
+      var copy = false;
+      msg.bg('showToken', path, username, copy,
         function showTokenCallback(data) {
           // remove any success or danger classes from other buttons
           $('.token-show').removeClass('label-success label-danger');
@@ -279,6 +328,22 @@
 
   function clearAlerts() {
     $('.alerts').empty();
+  }
+
+  /**
+   * Helper function to copy text from an input element to clipboard.
+   *
+   * copy-to-clipboard doesn't work from a service worker:
+   * https://bugs.chromium.org/p/chromium/issues/detail?id=1160302
+   */
+  function copyToClipboard(input) {
+    input.focus();
+    input.select();
+    document.execCommand('Copy');
+    input.blur();
+    // blur does not deselect input text
+    var selection = window.getSelection();
+    selection.removeAllRanges();
   }
 
   function filterSecrets(query) {
