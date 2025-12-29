@@ -107,12 +107,13 @@ var otplib = require('otplib');
     getPassword(path, username, function getPasswordCallback(result) {
       if (!result.error) {
         var url = new URL(result.password);
-        if (url.pathname.substring(0, 6) === '//totp' && url.searchParams.get('secret')) {
+        if (
+            (url.pathname.substring(0, 6) === '//totp' || url.host === 'totp') && url.searchParams.get('secret')) {
           var secret = url.searchParams.get('secret');
           result.generate = function generateToken() {
             return otplib.authenticator.generate(secret);
           };
-        } else if (url.pathname.substring(0, 6) === '//hotp') {
+        } else if (url.pathname.substring(0, 6) === '//hotp' || url.host === 'hotp') {
           result.error = 'Could not generate token';
           result.response = 'Sorry, HMAC-based One Time Password (HOTP) is not supported!';
         } else {
