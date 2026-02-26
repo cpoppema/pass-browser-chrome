@@ -12,7 +12,7 @@
     "esmify": "^2.1.1",
     "jquery": "^3.3.1",
     "match-sorter": "^4.0.1",
-    "openpgp": "^5.5.0",
+    "openpgp": "^6.3.0",
     "otplib": "^9.0.0",
     "parse-domain": "^2.0.0",
     "popper.js": "^1.14.3"
